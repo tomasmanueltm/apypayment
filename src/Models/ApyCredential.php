@@ -12,6 +12,7 @@ class ApyCredential extends Model
         'token',
         'client_id',
         'client_secret',
+        'grant_type',
         'resource',
         'auth_url',
         'api_url',

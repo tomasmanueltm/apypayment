@@ -17,14 +17,22 @@ class PackageServiceProvider extends ServiceProvider
 
     public function boot()
     {
-        // Publicar configurações
+        // Carrega migrations automaticamente
+        $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
+        
+        // Publica migrations para customização (opcional)
         $this->publishes([
-            __DIR__.'/../../config/apypayment.php' => config_path('apypayment.php'),
-        ], 'config');
-
-        // Publicar migrations
+            __DIR__.'/../../database/migrations' => database_path('migrations/vendor/apypayment'),
+        ], 'apypayment-migrations');
+        
+        // Publica seeder
         $this->publishes([
-            __DIR__.'/../../database/migrations/' => database_path('migrations'),
-        ], 'migrations');
+            __DIR__.'/../../database/seeders' => database_path('seeders/vendor/apypayment'),
+        ], 'apypayment-seeders');
+        
+        // Registra comando para rodar a procedure periodicamente
+        $this->commands([
+            \TomasManuelTM\ApyPayment\Console\Commands\CheckTokenExpiration::class
+        ]);
     }
 }
