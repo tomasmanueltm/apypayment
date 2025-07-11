@@ -1,0 +1,25 @@
+{
+    "name": "tomasmanueltm/apypayment",
+    "description": "Descrição do seu package",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "TomasManuelTM\\ApyPayment\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                 "TomasManuelTM\\ApyPayment\\Providers\\PackageServiceProvider"
+            ],
+            "aliases": {
+                "PackageFacade":  "TomasManuelTM\\ApyPayment\\Facades\\PackageFacade"
+            }
+        }
+    },
+    "require": {
+        "php": "^8.0",
+        "illuminate/support": "^9.0|^10.0"
+    }
+}
