@@ -43,9 +43,27 @@ return [
     |--------------------------------------------------------------------------
     */
     'default_currency' => 'BRL',
+    'default_payment_method' => 'REF_',
     'timeout' => 30,
+    'prefixes' => [
+        'default' => 'PS',
+        'renewal' => 'PC',
+    ],
     
-    #...
+    'tables' => [
+        'apy_payments' => [
+            'columns' => [
+                'reference' => 'reference->referenceNumber',
+                'merchant_transaction_id' => 'merchantTransactionId'
+            ],
+            'model' => \TomasManuelTM\ApyPayment\Models\ApyPayment::class
+        ],
+        // Outras tabelas podem ser adicionadas aqui
+    ],
+    
+    'storage' => [
+        'default_table' => 'apy_payments'
+    ],
 
 
     'token_check' => [
