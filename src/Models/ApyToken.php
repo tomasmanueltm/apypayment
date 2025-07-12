@@ -4,18 +4,12 @@ namespace TomasManuelTM\ApyPayment\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class ApyCredential extends Model
+class ApyToken extends Model
 {
-    protected $table = 'apy_credentials';
+    protected $table = 'apy_tokens';
 
     protected $fillable = [
         'token',
-        'client_id',
-        'client_secret',
-        'grant_type',
-        'resource',
-        'auth_url',
-        'api_url',
         'expires_on',
         'expires_in',
         'istoken'

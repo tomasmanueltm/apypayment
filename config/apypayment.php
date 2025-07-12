@@ -20,11 +20,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Parametros padrão
+    | Configurações de Parametros para Token
     |--------------------------------------------------------------------------
     */
     'grant_type' => env('APY_GRANT_TYPE', 'client_credentials'),
     'resource' => env('APY_RESOURCE', '2aed7612-de64-46b5-9e59-1f48f8902d14'),
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Configurações de Parametros Header
+    |--------------------------------------------------------------------------
+    */
+    'assertion' => '',
+    'accept_language' => 'pt-BR',
+    'accept' => 'application/json',
+    'content_type' => 'application/json',
+
 
     /*
     |--------------------------------------------------------------------------
@@ -33,4 +44,6 @@ return [
     */
     'default_currency' => 'BRL',
     'timeout' => 30,
+    
+    #...
 ];

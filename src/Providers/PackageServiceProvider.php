@@ -5,69 +5,117 @@ namespace TomasManuelTM\ApyPayment\Providers;
 use Illuminate\Support\ServiceProvider;
 use TomasManuelTM\ApyPayment\Services\ApyService;
 use TomasManuelTM\ApyPayment\Console\Commands\CheckTokenExpiration;
+use TomasManuelTM\ApyPayment\Console\Commands\PublishApyPayment;
+use TomasManuelTM\ApyPayment\Facades\ApyFacade;
 
 class PackageServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Registra os serviços do pacote.
      */
     public function register()
     {
-        $configPath = __DIR__.'/../../config/apypayment.php';
-        
-        if (file_exists($configPath)) {
-            $this->mergeConfigFrom($configPath, 'apypayment');
-        }
-
-        $this->app->singleton('ApyService', function ($app) {
-            return new ApyService();
-        });
+        $this->registerConfiguration();
+        $this->registerMainService();
     }
 
     /**
-     * Bootstrap any application services.
+     * Inicializa os serviços do pacote.
      */
     public function boot()
     {
-        // Só carrega recursos no console
+        $this->loadMigrations();
+        
         if ($this->app->runningInConsole()) {
-            $this->publishResources();
-            $this->registerCommands();
+            $this->registerConsoleResources();
         }
+    }
 
+    /**
+     * Carrega as migrações do pacote.
+     */
+    protected function loadMigrations()
+    {
         $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
     }
 
     /**
-     * Publica recursos do package
+     * Registra os recursos para o ambiente console.
      */
-    protected function publishResources()
+    protected function registerConsoleResources()
     {
-        // Configurações
+        $this->publishConfiguration();
+        $this->publishMigrations();
+        $this->publishSeeders();
+        $this->registerCommands();
+    }
+
+    /**
+     * Registra a configuração do pacote.
+     */
+    protected function registerConfiguration()
+    {
+        $configPath = __DIR__.'/../../config/apypayment.php';
+        
+        if (!file_exists($configPath)) {
+            throw new \RuntimeException('Configuração do ApyPayment não encontrada: '.$configPath);
+        }
+
+        $this->mergeConfigFrom($configPath, 'apypayment');
+    }
+
+    /**
+     * Registra o serviço principal.
+     */
+    protected function registerMainService()
+    {
+        $this->app->singleton('ApyService', function ($app) {
+            return new ApyService($app['config']->get('apypayment'));
+        });
+
+        $this->app->alias('ApyService', ApyFacade::class);
+    }
+
+    /**
+     * Publica o arquivo de configuração.
+     */
+    protected function publishConfiguration()
+    {
         $this->publishes([
             __DIR__.'/../../config/apypayment.php' => config_path('apypayment.php'),
         ], 'apypayment-config');
+    }
 
-        // Migrations
+    /**
+     * Publica as migrações do pacote.
+     */
+    protected function publishMigrations()
+    {
         $this->publishes([
-            __DIR__.'/../../database/migrations' => database_path('migrations/vendor/apypayment'),
+            __DIR__.'/../../database/migrations' => database_path('migrations'),
         ], 'apypayment-migrations');
+    }
 
-        // Seeders
-        if (is_dir(__DIR__.'/../../database/seeders')) {
+    /**
+     * Publica os seeders do pacote (se existirem).
+     */
+    protected function publishSeeders()
+    {
+        if (is_dir($seedersPath = __DIR__.'/../../database/seeders')) {
             $this->publishes([
-                __DIR__.'/../../database/seeders' => database_path('seeders/vendor/apypayment'),
+                $seedersPath => database_path('seeders'),
             ], 'apypayment-seeders');
         }
     }
 
     /**
-     * Registra comandos do package
+     * Registra os comandos do pacote.
      */
     protected function registerCommands()
     {
         $this->commands([
             CheckTokenExpiration::class,
+            PublishApyPayment::class,
         ]);
     }
 }

@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\DB;
 
 class CheckTokenExpiration extends Command
 {
-    protected $signature = 'apy:check-tokens';
-    protected $description = 'Verifica e atualiza tokens expirados';
+    protected $signature = 'apypayment:token';
+    protected $description = 'Verifica e atualiza token expirado';
 
     public function handle()
     {
