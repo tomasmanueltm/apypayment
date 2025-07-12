@@ -46,4 +46,10 @@ return [
     'timeout' => 30,
     
     #...
+
+
+    'token_check' => [
+        'driver' => env('DB_CONNECTION', 'mysql'), // Define o driver padrão
+        'batch_size' => 1000, // Para processamento em lotes
+    ],
 ];

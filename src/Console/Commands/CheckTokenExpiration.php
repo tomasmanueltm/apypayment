@@ -12,7 +12,11 @@ class CheckTokenExpiration extends Command
 
     public function handle()
     {
-        DB::unprepared('CALL check_and_update_token_expiration()');
+        if (config('database.default') === 'mysql') {
+            DB::unprepared('CALL check_and_update_token_expiration()');
+        } else {
+            CheckTokenExpirationJob::dispatch();
+        }
         $this->info('Token expiration check completed.');
     }
 }
