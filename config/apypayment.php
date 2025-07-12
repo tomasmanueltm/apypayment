@@ -1,0 +1,36 @@
+<?php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | API Configuration
+    |--------------------------------------------------------------------------
+    */
+    'api_url' => env('APY_API_URL', 'https://gwy-api-tst.appypay.co.ao/v2.0'),
+    'auth_url' => env('APY_AUTH_URL', 'https://login.microsoftonline.com/appypaydev.onmicrosoft.com/oauth2/token'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Credenciais Cliente
+    |--------------------------------------------------------------------------
+    */
+    'client_id' => env('APY_CLIENT_ID'),
+    'client_secret' => env('APY_CLIENT_SECRET'),
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Parametros padrão
+    |--------------------------------------------------------------------------
+    */
+    'grant_type' => env('APY_GRANT_TYPE', 'client_credentials'),
+    'resource' => env('APY_RESOURCE', '2aed7612-de64-46b5-9e59-1f48f8902d14'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Configurações de Pagamento
+    |--------------------------------------------------------------------------
+    */
+    'default_currency' => 'BRL',
+    'timeout' => 30,
+];

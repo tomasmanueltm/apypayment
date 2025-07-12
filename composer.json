@@ -6,7 +6,10 @@
     "autoload": {
         "psr-4": {
             "TomasManuelTM\\ApyPayment\\": "src/"
-        }
+        },
+        "files": [
+            "config/apypayment.php"
+        ]
     },
     "extra": {
         "laravel": {
