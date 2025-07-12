@@ -108,6 +108,30 @@ class ApyService
     }
 
     /**
+     * Obter todos metodos de pagamento disponíveis
+     */
+    public function getPaymentMethods(): ?array
+    {
+        $token = $this->getAccessToken();
+        if (!$token) {
+            return null;
+        }
+
+        try {
+            $response = $this->client->get($this->apiUrl . '/applications', [
+                'headers' => $this->getRequestHeaders($token),
+            ]);
+
+            return json_decode($response->getBody(), true);
+
+        } catch (GuzzleException $e) {
+            Log::error('IPay Get Payment Methods Error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+
+    /**
      * Cria um novo pagamento
      */
     public function createPayment(array $paymentData): ?array

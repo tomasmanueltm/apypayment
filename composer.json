@@ -1,14 +1,48 @@
 {
     "name": "tomasmanueltm/apypayment",
-    "description": "Descrição do seu package",
+    "description": "Laravel package for seamless payment processing and transaction management with multiple payment providers integration",
+    "keywords": [
+        "laravel",
+        "payment",
+        "transaction",
+        "api",
+        "integration",
+        "finance"
+    ],
     "type": "library",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Tomas Manuel",
+            "email": "antoniomanuelbaptistabaptista@gmail.com",
+            "homepage": "https://github.com/tomasmanueltm",
+            "role": "Developer Full Stack"
+        }
+    ],
+    "homepage": "https://github.com/tomasmanueltm/apypayment",
+    "support": {
+        "email": "antoniomanuelbaptistabaptista@gmail.com",
+        "issues": "https://github.com/tomasmanueltm/apypayment/issues",
+        "source": "https://github.com/tomasmanueltm/apypayment",
+        "docs": "https://github.com/tomasmanueltm/apypayment/wiki"
+    },
+    "require": {
+        "php": "^8.0",
+        "illuminate/support": "^9.0|^10.0|^11.0|^12.0",
+        "guzzlehttp/guzzle": "^7.0",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^6.0|^7.0|^8.0",
+        "phpunit/phpunit": "^9.5|^10.0",
+        "mockery/mockery": "^1.4"
+    },
     "autoload": {
         "psr-4": {
             "TomasManuelTM\\ApyPayment\\": "src/"
         },
         "files": [
-            "config/apypayment.php"
+            "src/Helpers/Money.php"
         ]
     },
     "autoload-dev": {
@@ -19,18 +53,25 @@
     "extra": {
         "laravel": {
             "providers": [
-                 "TomasManuelTM\\ApyPayment\\Providers\\PackageServiceProvider"
+                "TomasManuelTM\\ApyPayment\\Providers\\ApyPaymentServiceProvider"
             ],
             "aliases": {
-                "PackageFacade":  "TomasManuelTM\\ApyPayment\\Facades\\PackageFacade"
+                "ApyPayment": "TomasManuelTM\\ApyPayment\\Facades\\ApyPaymentFacade"
             }
         }
     },
-    "require": {
-        "php": "^8.0",
-        "illuminate/support": "^9.0|^10.0|^11.0|^12.0"
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage",
+        "analyse": "vendor/bin/phpstan analyse",
+        "lint": "vendor/bin/pint"
     },
-    "conflict": {
-        "laravel/framework": "<9.0|>=13.0"
-    }
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }

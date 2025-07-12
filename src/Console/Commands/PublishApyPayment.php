@@ -19,7 +19,7 @@ class PublishApyPayment extends Command
 
         foreach ($tags as $tag) {
             $this->call('vendor:publish', array_merge([
-                '--provider' => 'TomasManuelTM\ApyPayment\Providers\PackageServiceProvider',
+                '--provider' => 'TomasManuelTM\ApyPayment\Providers\ApyPaymentServiceProvider',
                 '--tag' => $tag,
             ], $force));
         }
