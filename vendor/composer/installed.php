@@ -3,7 +3,7 @@
         'name' => 'tomasmanueltm/apypayment',
         'pretty_version' => 'dev-developer',
         'version' => 'dev-developer',
-        'reference' => '8c9f09804931d3b70ad86cf143991966c1fcae4f',
+        'reference' => 'd9bef91ab659d0ac84bee086f16fa624a43e6524',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -184,7 +184,7 @@
         'tomasmanueltm/apypayment' => array(
             'pretty_version' => 'dev-developer',
             'version' => 'dev-developer',
-            'reference' => '8c9f09804931d3b70ad86cf143991966c1fcae4f',
+            'reference' => 'd9bef91ab659d0ac84bee086f16fa624a43e6524',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

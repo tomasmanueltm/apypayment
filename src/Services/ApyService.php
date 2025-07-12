@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services;
+namespace TomasManuelTM\ApyPayment\Services;
 
 use Carbon\Carbon;
 use GuzzleHttp\Client;
-use App\Models\ApyPayment;
-use App\Models\ApyToken;
 use Illuminate\Support\Facades\Log;
 use GuzzleHttp\Exception\GuzzleException;
+use TomasManuelTM\ApyPayment\Models\ApyToken;
+use TomasManuelTM\ApyPayment\Models\ApyPayment;
 
 class ApyService
 {
@@ -60,15 +60,16 @@ class ApyService
         if ($this->accessToken) {
             return $this->accessToken;
         }
-
         $this->checkExpiredTokens();
 
         try {
             $credential = ApyToken::where('istoken', true)->first();
+
             if ($credential) {
                 $this->accessToken = $credential->token;
                 return $this->accessToken;
             }
+
 
             $response = $this->client->post($this->authUrl, [
                 'form_params' => [
@@ -85,6 +86,7 @@ class ApyService
             return $this->accessToken = $data['access_token'];
 
         } catch (GuzzleException $e) {
+            return $e->getMessage();
             Log::error('IPay Auth Error: ' . $e->getMessage());
             return null;
         }
@@ -327,5 +329,68 @@ class ApyService
     public function getDefaultStorageTable(): string
     {
         return config('apypayment.storage.default_table', 'apy_payments');
+    }
+
+    public function listPayments() //:void
+    {
+        // Dispara a execução em segundo plano sem esperar
+        try {
+            $token = $this->getAccessToken();
+            if (!$token) return;
+
+            $response = $this->client->get($this->apiUrl . '/charges', [
+                'headers' => ['Authorization' => 'Bearer ' . $token],
+            ]);
+
+            $payments = json_decode($response->getBody(), true)['payments'] ?? [];
+            
+            foreach ($payments as $payment) {
+                $this->processPayment($payment);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Background payment processing error: ' . $e->getMessage());
+        }
+        dispatch(function () {
+        });
+    }
+
+    private function processPayment(array $payment): void
+    {
+
+        $paymentData = [
+            'id' => $payment['id'],
+            'merchantTransactionId' => $payment['merchantTransactionId'],
+            'type' => $payment['type'],
+            'operation' => $payment['operation'],
+            'amount' => $payment['amount'],
+            'currency' => $payment['currency'],
+            'status' => $payment['status'],
+            'description' => $payment['description'],
+            'paymentMethod' => $payment['paymentMethod'],
+            'disputes' => $payment['disputes'],
+            'applicationFeeAmount' => $payment['applicationFeeAmount'],
+            'options' => $payment['options'],
+            'createdDate' => Carbon::parse($payment['createdDate']),
+            'updatedDate' => Carbon::parse($payment['updatedDate']),
+            'reference' => [
+                'referenceNumber' => $payment['reference']['referenceNumber'],
+                'dueDate' => Carbon::parse($payment['reference']['dueDate'])->toDateTimeString(),
+                'entity' => $payment['reference']['entity'],
+            ],
+        ];
+        // Cria ou atualiza o pagamento
+        ApyPayment::updateOrCreate(
+            ['merchantTransactionId' => $paymentData['merchantTransactionId']],
+            $paymentData
+        );
+
+        // Processa pagamentos com sucesso
+        if ($paymentData['status'] === 'Success') {
+             app('apypayment.updater')->executeOnSuccess($paymentData);
+            // $dbPayment = Payment::where('reference', $payment['reference']['referenceNumber'])
+            //                 ->where('state', '0')
+            //                 ->first();
+        }
     }
 }

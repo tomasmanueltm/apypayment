@@ -6,8 +6,8 @@ return [
     | API Configuration
     |--------------------------------------------------------------------------
     */
-    'api_url' => env('APY_API_URL', 'https://gwy-api-tst.appypay.co.ao/v2.0'),
-    'auth_url' => env('APY_AUTH_URL', 'https://login.microsoftonline.com/appypaydev.onmicrosoft.com/oauth2/token'),
+   'api_url' => env('APY_API_URL') ? env('APY_API_URL') : 'https://gwy-api-tst.appypay.co.ao/v2.0',
+    'auth_url' => env('APY_AUTH_URL') ? env('APY_AUTH_URL')  : 'https://login.microsoftonline.com/appypaydev.onmicrosoft.com/oauth2/token',
 
     /*
     |--------------------------------------------------------------------------
@@ -59,6 +59,26 @@ return [
             'model' => \TomasManuelTM\ApyPayment\Models\ApyPayment::class
         ],
         // Outras tabelas podem ser adicionadas aqui
+    ],
+
+    // Configurações quando ocorrer pagamentos de uma referência
+    'status_updates' => [
+        // Atualiza o status de pagamento em outras tabelas 
+        // automatizando o processo de atualização
+        /*[
+            'table' => 'orders', // Tabela de pedidos
+            'column' => 'payment_status', // Coluna que armazena o status do pagamento
+            'payment_key' => 'merchantTransactionId', // Chave para acessar o valor do pagamento
+            'expected_value' => null, // qualquer valor
+            'new_value' => 'paid' // Novo valor para o status
+        ],
+        [
+            'table' => 'subscriptions', // Tabela de assinaturas
+            'column' => 'reference_code', // Coluna que armazena o código de referência
+            'payment_key' => 'reference.referenceNumber',  // Chave para acessar o valor de referência
+            'expected_value' => 'SUB-', // Exemplo de prefixo
+            'new_value' => 'active' // Novo valor para o status
+        ]*/
     ],
     
     'storage' => [
