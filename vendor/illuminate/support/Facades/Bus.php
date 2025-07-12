@@ -20,6 +20,8 @@ use Illuminate\Support\Testing\Fakes\BusFake;
  * @method static void dispatchAfterResponse(mixed $command, mixed $handler = null)
  * @method static \Illuminate\Bus\Dispatcher pipeThrough(array $pipes)
  * @method static \Illuminate\Bus\Dispatcher map(array $map)
+ * @method static \Illuminate\Bus\Dispatcher withDispatchingAfterResponses()
+ * @method static \Illuminate\Bus\Dispatcher withoutDispatchingAfterResponses()
  * @method static \Illuminate\Support\Testing\Fakes\BusFake except(array|string $jobsToDispatch)
  * @method static void assertDispatched(string|\Closure $command, callable|int|null $callback = null)
  * @method static void assertDispatchedTimes(string|\Closure $command, int $times = 1)
@@ -32,11 +34,13 @@ use Illuminate\Support\Testing\Fakes\BusFake;
  * @method static void assertDispatchedAfterResponseTimes(string|\Closure $command, int $times = 1)
  * @method static void assertNotDispatchedAfterResponse(string|\Closure $command, callable|null $callback = null)
  * @method static void assertChained(array $expectedChain)
+ * @method static void assertNothingChained()
  * @method static void assertDispatchedWithoutChain(string|\Closure $command, callable|null $callback = null)
  * @method static \Illuminate\Support\Testing\Fakes\ChainedBatchTruthTest chainedBatch(\Closure $callback)
  * @method static void assertBatched(callable $callback)
  * @method static void assertBatchCount(int $count)
  * @method static void assertNothingBatched()
+ * @method static void assertNothingPlaced()
  * @method static \Illuminate\Support\Collection dispatched(string $command, callable|null $callback = null)
  * @method static \Illuminate\Support\Collection dispatchedSync(string $command, callable|null $callback = null)
  * @method static \Illuminate\Support\Collection dispatchedAfterResponse(string $command, callable|null $callback = null)
@@ -47,6 +51,7 @@ use Illuminate\Support\Testing\Fakes\BusFake;
  * @method static \Illuminate\Bus\Batch dispatchFakeBatch(string $name = '')
  * @method static \Illuminate\Bus\Batch recordPendingBatch(\Illuminate\Bus\PendingBatch $pendingBatch)
  * @method static \Illuminate\Support\Testing\Fakes\BusFake serializeAndRestore(bool $serializeAndRestore = true)
+ * @method static array dispatchedBatches()
  *
  * @see \Illuminate\Bus\Dispatcher
  * @see \Illuminate\Support\Testing\Fakes\BusFake
@@ -63,8 +68,8 @@ class Bus extends Facade
     public static function fake($jobsToFake = [], ?BatchRepository $batchRepository = null)
     {
         $actualDispatcher = static::isFake()
-                ? static::getFacadeRoot()->dispatcher
-                : static::getFacadeRoot();
+            ? static::getFacadeRoot()->dispatcher
+            : static::getFacadeRoot();
 
         return tap(new BusFake($actualDispatcher, $jobsToFake, $batchRepository), function ($fake) {
             static::swap($fake);
@@ -82,7 +87,7 @@ class Bus extends Facade
         $jobs = is_array($jobs) ? $jobs : func_get_args();
 
         return (new PendingChain(array_shift($jobs), $jobs))
-                    ->dispatch();
+            ->dispatch();
     }
 
     /**

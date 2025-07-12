@@ -17,7 +17,6 @@ class ChainedBatchTruthTest
      * Create a new truth test instance.
      *
      * @param  \Closure  $callback
-     * @return void
      */
     public function __construct(Closure $callback)
     {
@@ -27,7 +26,7 @@ class ChainedBatchTruthTest
     /**
      * Invoke the truth test with the given pending batch.
      *
-     * @param  \Illuminate\Bus\PendingBatch
+     * @param  \Illuminate\Bus\PendingBatch  $pendingBatch
      * @return bool
      */
     public function __invoke($pendingBatch)
