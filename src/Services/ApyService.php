@@ -145,14 +145,25 @@ class ApyService
      * @param array $apiResponse Resposta da API
      * @param int $attempt Número da tentativa atual
      * @return array Retorna o status processado ou novo conjunto de dados para retentativa
-     */
+    */
     private function handlePaymentResponse(array $paymentData, array $apiResponse, int $attempt = 1): array
     {
         $statusCode = $apiResponse['status'] ?? 200;
         $responseStatus = $apiResponse['responseStatus'] ?? [];
+        $isSuccessful = $responseStatus['successful'] ?? false;
+        $errorCode = $responseStatus['code'] ?? 0;
+        $errorMessage = $responseStatus['message'] ?? 'Erro desconhecido';
+
+        \Log::info('Payment Response', [
+            'status_code' => $statusCode,
+            'response_status' => $responseStatus,
+            'attempt' => $attempt,
+            'data' => $apiResponse
+        ]);
         
-        // Caso de sucesso
-        if ($statusCode === 200 && ($responseStatus['successful'] ?? false)) {
+        // Casos de sucesso (200 OK ou 202 Accepted com código 101)
+        if (($statusCode === 200 || $statusCode === 202) && 
+            ($isSuccessful || $errorCode === 101)) {
             return [
                 'status' => 'success',
                 'data' => $apiResponse,
@@ -163,13 +174,15 @@ class ApyService
         $paymentData['currency'] = config('apypayment.default_currency', 'AOA');
         
         // Tratamento de erros específicos
-        $errorCode = $responseStatus['code'] ?? 0;
-        $errorMessage = $responseStatus['message'] ?? 'Erro desconhecido';
-
         switch ($errorCode) {
             // Caso de merchantTransactionId duplicado
             case 726:
                 if ($attempt >= 3) {
+                    \Log::error('Payment failed - Duplicate merchantTransactionId after max attempts', [
+                        'error' => $errorMessage,
+                        'code' => $errorCode,
+                        'attempts' => $attempt
+                    ]);
                     return [
                         'status' => 'error',
                         'error' => 'Número máximo de tentativas atingido para merchantTransactionId',
@@ -181,6 +194,11 @@ class ApyService
                 $newTransactionId = $this->generateMerchantId();
                 $paymentData['merchantTransactionId'] = $newTransactionId;
                 
+                \Log::warning('Retrying payment - Duplicate merchantTransactionId', [
+                    'new_id' => $newTransactionId,
+                    'attempt' => $attempt + 1
+                ]);
+                
                 return [
                     'status' => 'retry',
                     'new_data' => $paymentData,
@@ -191,6 +209,11 @@ class ApyService
             // Caso de referência duplicada
             case 763:
                 if ($attempt >= 3) {
+                    \Log::error('Payment failed - Duplicate reference after max attempts', [
+                        'error' => $errorMessage,
+                        'code' => $errorCode,
+                        'attempts' => $attempt
+                    ]);
                     return [
                         'status' => 'error',
                         'error' => 'Número máximo de tentativas atingido para referência',
@@ -202,6 +225,11 @@ class ApyService
                 $newReference = $this->generateUniqueReference();
                 $paymentData['paymentInfo']['referenceNumber'] = $newReference;
                 
+                \Log::warning('Retrying payment - Duplicate reference', [
+                    'new_reference' => $newReference,
+                    'attempt' => $attempt + 1
+                ]);
+                
                 return [
                     'status' => 'retry',
                     'new_data' => $paymentData,
@@ -211,6 +239,13 @@ class ApyService
 
             // Outros erros não recuperáveis
             default:
+                \Log::error('Payment failed', [
+                    'status' => 'error',
+                    'error' => $errorMessage,
+                    'code' => $errorCode,
+                    'attempts' => $attempt
+                ]);
+                
                 return [
                     'status' => 'error',
                     'error' => $errorMessage,
@@ -219,7 +254,6 @@ class ApyService
                 ];
         }
     }
-
 
     /**
      * Obter todos metodos de pagamento disponíveis
@@ -267,8 +301,6 @@ class ApyService
         }
     }
 
-
-    
 
     /**
      * Cria um novo pagamento na API
@@ -344,9 +376,6 @@ class ApyService
         
         return null;
     }
-
-
-
   
 
     /**
