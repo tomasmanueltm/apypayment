@@ -42,8 +42,8 @@ return [
     | Configurações de Pagamento
     |--------------------------------------------------------------------------
     */
-    'default_currency' => 'BRL',
-    'default_payment_method' => 'REF_',
+    'default_currency' => 'AOA',
+    'default_payment_method' => 'REF',
     'timeout' => 30,
     'prefixes' => [
         'default' => 'PS',
@@ -62,7 +62,7 @@ return [
     ],
 
     // Configurações quando ocorrer pagamentos de uma referência
-    'status_updates' => [
+    'status_update' => [
         // Atualiza o status de pagamento em outras tabelas 
         // automatizando o processo de atualização
         /*[

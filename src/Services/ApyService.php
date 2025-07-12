@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
 use GuzzleHttp\Exception\GuzzleException;
+use TomasManuelTM\ApyPayment\Models\ApyMethod;
 use TomasManuelTM\ApyPayment\Models\ApyToken;
 use TomasManuelTM\ApyPayment\Models\ApyPayment;
 
@@ -46,9 +47,12 @@ class ApyService
             'verify' => false,
             'timeout' => 30,
             'headers' => [
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
+                "limit" => 10,
+                "Accept-Language" => config('apypayment.accept_language'),
+                'Accept' => config('apypayment.accept'),
+                'Content-Type' => config('apypayment.content_type'),
             ],
+            'http_errors' => false
         ]);
     }
 
@@ -81,7 +85,7 @@ class ApyService
             ]);
 
             $data = json_decode($response->getBody(), true);
-            $this->storeNewToken($data);
+            $this->currentToken($data);
             
             return $this->accessToken = $data['access_token'];
 
@@ -93,9 +97,22 @@ class ApyService
     }
 
     /**
+     * Cabeçalhos padrão para requisições
+     */
+    private function getRequestHeaders(string $token): array
+    {
+        return [
+            'Accept-Language' => config('apypayment.accept_language'),
+            'Accept' => config('apypayment.accept'),
+            'Content-Type' => config('apypayment.content_type'),
+            'Authorization' => 'Bearer ' . $token,
+        ];
+    }
+
+    /**
      * Armazena novo token no banco de dados
      */
-    private function storeNewToken(array $tokenData): void
+    private function currentToken(array $tokenData): void
     {
         ApyToken::first()->update(
             [
@@ -106,6 +123,103 @@ class ApyService
             ]
         );
     }
+
+    
+    /**
+     * Gera uma referência única para pagamento
+     */
+    public function generateReference(): string
+    {
+        do {
+            $reference = mt_rand(100000000, 999999999);
+            $exists = ApyPayment::where('reference->referenceNumber', $reference)->exists();
+        } while ($exists);
+
+        return (string) $reference;
+    }
+
+    /**
+     * Processa a resposta da API e toma ações corretivas quando necessário
+     * 
+     * @param array $paymentData Dados originais do pagamento
+     * @param array $apiResponse Resposta da API
+     * @param int $attempt Número da tentativa atual
+     * @return array Retorna o status processado ou novo conjunto de dados para retentativa
+     */
+    private function handlePaymentResponse(array $paymentData, array $apiResponse, int $attempt = 1): array
+    {
+        $statusCode = $apiResponse['status'] ?? 200;
+        $responseStatus = $apiResponse['responseStatus'] ?? [];
+        
+        // Caso de sucesso
+        if ($statusCode === 200 && ($responseStatus['successful'] ?? false)) {
+            return [
+                'status' => 'success',
+                'data' => $apiResponse,
+                'attempts' => $attempt
+            ];
+        }
+
+        $paymentData['currency'] = config('apypayment.default_currency', 'AOA');
+        
+        // Tratamento de erros específicos
+        $errorCode = $responseStatus['code'] ?? 0;
+        $errorMessage = $responseStatus['message'] ?? 'Erro desconhecido';
+
+        switch ($errorCode) {
+            // Caso de merchantTransactionId duplicado
+            case 726:
+                if ($attempt >= 3) {
+                    return [
+                        'status' => 'error',
+                        'error' => 'Número máximo de tentativas atingido para merchantTransactionId',
+                        'original_error' => $errorMessage
+                    ];
+                }
+                
+                // Gera novo merchantTransactionId
+                $newTransactionId = $this->generateMerchantId();
+                $paymentData['merchantTransactionId'] = $newTransactionId;
+                
+                return [
+                    'status' => 'retry',
+                    'new_data' => $paymentData,
+                    'reason' => 'merchantTransactionId duplicado',
+                    'attempts' => $attempt + 1
+                ];
+
+            // Caso de referência duplicada
+            case 763:
+                if ($attempt >= 3) {
+                    return [
+                        'status' => 'error',
+                        'error' => 'Número máximo de tentativas atingido para referência',
+                        'original_error' => $errorMessage
+                    ];
+                }
+                
+                // Gera nova referência
+                $newReference = $this->generateUniqueReference();
+                $paymentData['paymentInfo']['referenceNumber'] = $newReference;
+                
+                return [
+                    'status' => 'retry',
+                    'new_data' => $paymentData,
+                    'reason' => 'Referência duplicada',
+                    'attempts' => $attempt + 1
+                ];
+
+            // Outros erros não recuperáveis
+            default:
+                return [
+                    'status' => 'error',
+                    'error' => $errorMessage,
+                    'code' => $errorCode,
+                    'attempts' => $attempt
+                ];
+        }
+    }
+
 
     /**
      * Obter todos metodos de pagamento disponíveis
@@ -121,7 +235,7 @@ class ApyService
             $response = $this->client->get($this->apiUrl . '/applications', [
                 'headers' => $this->getRequestHeaders($token),
             ]);
-
+            $this->getPaymentMethodsType(json_decode($response->getBody(), true));
             return json_decode($response->getBody(), true);
 
         } catch (GuzzleException $e) {
@@ -130,52 +244,144 @@ class ApyService
         }
     }
 
+    
 
-    /**
-     * Cria um novo pagamento
-     */
-    public function createPayment(array $paymentData): ?array
+    /*
+    *  Sincroniza tipos de pagamento com o banco de dados local
+    */
+    private function getPaymentMethodsType(array $paymentData): void
     {
-        $token = $this->getAccessToken();
-        if (!$token) {
-            return null;
-        }
-
-        $paymentData = $this->preparePaymentData($paymentData);
-
         try {
-            $response = $this->client->post($this->apiUrl . '/charges', [
-                'headers' => $this->getRequestHeaders($token),
-                'json' => $paymentData,
-            ]);
-
-            $responseData = json_decode($response->getBody(), true);
-            $this->syncPaymentToDatabase($responseData);
-            
-            return $responseData;
-
-        } catch (GuzzleException $e) {
-            Log::error('IPay Create Payment Error: ' . $e->getMessage());
-            return null;
+            foreach ($paymentData['applications'] as $data) {
+                ApyMethod::updateOrCreate(['hash' => $data['id']], [
+                    'hash' => $data['id'],
+                    'name' => $data['name'],
+                    'method'=> $data['paymentMethod'],
+                    'isActive'=> $data['isActive'],
+                    'isDefault'=> $data['isDefault'],
+                    'type'=> $data['paymentMethod'].'_'.$data['applicationKyes'][0]['apiKey'],
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Register Types Payment : ' . $e->getMessage());
         }
     }
 
+
+    
+
     /**
-     * Prepara dados do pagamento com valores padrão
+     * Cria um novo pagamento na API
+     * 
+     * @param array $paymentData Dados do pagamento
+     * @return array|null Resposta da API ou null em caso de erro
      */
-    private function preparePaymentData(array $paymentData): array
+
+    public function createPayment(array $paymentData, int $maxAttempts = 3): ?array
     {
-        return array_merge([
-            'paymentMethod' => config('apypayment.default_payment_method'),
-            'merchantTransactionId' => $this->generateMerchantTransactionId(),
-        ], $paymentData);
+        $attempt = 1;
+        $lastError = null;
+        
+        $paymentData['merchantTransactionId'] = $this->generateMerchantId();
+        $paymentData['currency'] = config('apypayment.default_currency', 'AOA');
+        $paymentData['paymentMethod'] =  $this->getPaymentType(config('apypayment.default_payment_method'));
+
+
+        do {
+            $token = $this->getAccessToken();
+            if (!$token) {
+                Log::error('Failed to get access token');
+                return null;
+            }
+
+
+            
+            try {
+                $response = $this->client->post($this->apiUrl . '/charges', [
+                    'headers' => $this->getRequestHeaders($token),
+                    'json' => $paymentData,
+                    'http_errors' => false
+                ]);
+
+                $responseData = json_decode($response->getBody(), true);
+                $responseData['status'] = $response->getStatusCode();
+                $this->listPayments();
+                // Processa a resposta
+                $result = $this->handlePaymentResponse($paymentData, $responseData, $attempt);
+                
+                switch ($result['status']) {
+                    case 'success':
+                        $this->syncPaymentToDatabase($responseData);
+                        return $responseData;
+                        
+                    case 'retry':
+                        $paymentData = $result['new_data'];
+                        Log::warning('Retrying payment', $result);
+                        break;
+                        
+                    case 'error':
+                        Log::error('Payment failed', $result);
+                        return null;
+                }
+                
+            } catch (\Exception $e) {
+                Log::error('Payment request failed', [
+                    'error' => $e->getMessage(),
+                    'attempt' => $attempt
+                ]);
+                return null;
+            }
+            
+            $attempt++;
+            sleep(1); // Pequena pausa entre tentativas
+                
+        } while ($attempt <= $maxAttempts);
+
+            Log::error('Max payment attempts reached', [
+                'last_data' => $paymentData,
+                'last_error' => $lastError
+            ]);
+        
+        return null;
     }
+
+
+
+  
+
+    /**
+     * Busca o tipo de pagamento com fallback para o método padrão
+     * 
+     * @param string $type Método de pagamento a ser pesquisado
+     * @return string Tipo de pagamento encontrado ou o padrão
+     * @throws \RuntimeException Quando nenhum método é encontrado
+     */
+    private function getPaymentType(string $type): string
+    {
+        // Busca o método específico
+        $paymentMethod = ApyMethod::where('method', $type)->first();
+        
+        if ($paymentMethod) {
+            return $paymentMethod->type;
+        }
+        
+        // Fallback para o método padrão
+        $defaultMethod = ApyMethod::where('isDefault', true)->first();
+        
+        if (!$defaultMethod) {
+            throw new \RuntimeException('Nenhum método de pagamento padrão configurado');
+        }
+        
+        return $defaultMethod->type;
+    }
+
 
     /**
      * Sincroniza pagamento com o banco de dados local
      */
     private function syncPaymentToDatabase(array $paymentData): void
     {
+        \Log::info('sssssss '.$paymentData);
         try {
             ApyPayment::updateOrCreate(
                 ['merchantTransactionId' => $paymentData['merchantTransactionId']],
@@ -250,18 +456,7 @@ class ApyService
             ->update(['istoken' => false]);
     }
 
-    /**
-     * Cabeçalhos padrão para requisições
-     */
-    private function getRequestHeaders(string $token): array
-    {
-        return [
-            "Accept-Language" => 'pt-BR',
-            'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
-            'Authorization' => 'Bearer ' . $token,
-        ];
-    }
+
 
     /**
      * Busca pagamentos nas tabelas configuradas
@@ -319,23 +514,45 @@ class ApyService
             : $columns['merchant_transaction_id'];
     }
 
-    /**
-     * Gera um merchantTransactionId com prefixo configurável
+   /**
+     * Gera um merchantTransactionId com prefixo configurável garantindo unicidade
      */
-    public function generateMerchantId(
-        bool $isRenewal = false, 
-        ?string $customPrefix = null
-    ): string {
+    public function generateMerchantId(bool $isRenewal = false, ?string $customPrefix = null, int $maxAttempts = 100): string 
+    {
         $prefixes = config('apypayment.prefixes');
         $prefix = $customPrefix ?? ($isRenewal ? $prefixes['renewal'] : $prefixes['default']);
         
+        // Primeiro tenta obter o último ID sequencial
         $lastId = ApyPayment::where('merchantTransactionId', 'like', $prefix.'%')
             ->orderByDesc('id')
             ->value('merchantTransactionId');
             
         $lastNum = $lastId ? (int) substr($lastId, strlen($prefix)) : 0;
+        $newId = $prefix . str_pad($lastNum + 1, 9, '0', STR_PAD_LEFT);
         
-        return $prefix . str_pad($lastNum + 1, 9, '0', STR_PAD_LEFT);
+        // Verifica se o ID já existe (caso raro de concorrência)
+        $exists = ApyPayment::where('merchantTransactionId', $newId)->exists();
+        
+        // Se existir, tenta encontrar um ID disponível
+        $attempts = 0;
+        while ($exists && $attempts < $maxAttempts) {
+            $lastNum++;
+            $newId = $prefix . str_pad($lastNum + 1, 9, '0', STR_PAD_LEFT);
+            $exists = ApyPayment::where('merchantTransactionId', $newId)->exists();
+            $attempts++;
+        }
+        
+        if ($exists) {
+            Log::error('Falha ao gerar ID único para transação', [
+                'prefixo' => $prefix,
+                'ultimo_id' => $lastId,
+                'tentativas' => $attempts,
+                'proximo_id_tentado' => $newId
+            ]);
+            throw new \RuntimeException("Falha ao gerar ID único após {$maxAttempts} tentativas");
+        }
+        
+        return $newId;
     }
 
 
@@ -355,19 +572,20 @@ class ApyService
         return config('apypayment.storage.default_table', 'apy_payments');
     }
 
-    public function listPayments() //:void
+    public function listPayments() :void
     {
         // Dispara a execução em segundo plano sem esperar
         try {
             $token = $this->getAccessToken();
             if (!$token) return;
 
-            $response = $this->client->get($this->apiUrl . '/charges', [
-                'headers' => ['Authorization' => 'Bearer ' . $token],
+            $response = $this->client->get($this->apiUrl . '/charges?limit=1000000', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $token,
+                ],
             ]);
 
             $payments = json_decode($response->getBody(), true)['payments'] ?? [];
-            
             foreach ($payments as $payment) {
                 $this->processPayment($payment);
             }
@@ -398,23 +616,27 @@ class ApyService
             'createdDate' => Carbon::parse($payment['createdDate']),
             'updatedDate' => Carbon::parse($payment['updatedDate']),
             'reference' => [
-                'referenceNumber' => $payment['reference']['referenceNumber'],
-                'dueDate' => Carbon::parse($payment['reference']['dueDate'])->toDateTimeString(),
-                'entity' => $payment['reference']['entity'],
+                'referenceNumber' => $payment['reference']['referenceNumber'] ?? time(),
+                'dueDate' => Carbon::parse(($payment['reference']['dueDate'] ?? date('Y-m-d', strtotime('+2 days'))))->toDateTimeString(),
+                'entity' => $payment['reference']['entity'] ?? '00083',
             ],
         ];
-        // Cria ou atualiza o pagamento
-        ApyPayment::updateOrCreate(
-            ['merchantTransactionId' => $paymentData['merchantTransactionId']],
-            $paymentData
-        );
 
-        // Processa pagamentos com sucesso
-        if ($paymentData['status'] === 'Success') {
-             app('apypayment.updater')->executeOnSuccess($paymentData);
-            // $dbPayment = Payment::where('reference', $payment['reference']['referenceNumber'])
-            //                 ->where('state', '0')
-            //                 ->first();
+        if($paymentData['reference']) {
+            // Cria ou atualiza o pagamento
+            ApyPayment::updateOrCreate(
+                ['merchantTransactionId' => $paymentData['merchantTransactionId']],
+                $paymentData
+            );
+    
+            // Processa pagamentos com sucesso
+            if ($paymentData['status'] === 'Success') {
+                //  app('apypayment.status_update')->executeOnSuccess($paymentData);
+                // $dbPayment = Payment::where('reference', $payment['reference']['referenceNumber'])
+                //                 ->where('state', '0')
+                //                 ->first();
+            }
         }
+        
     }
 }

@@ -2,7 +2,7 @@
 
 namespace TomasManuelTM\ApyPayment\Jobs;
 
-use TomasManuelTM\ApyPayment\Services\IPayService;
+use TomasManuelTM\ApyPayment\Services\ApyService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -17,8 +17,8 @@ class ProcessPaymentsJob implements ShouldQueue
     {
     }
 
-    public function handle(IPayService $ipayService)
+    public function handle(ApyService $ApyService)
     {
-        $ipayService->processPaymentsAsync();
+        $ApyService->processPaymentsAsync();
     }
 }

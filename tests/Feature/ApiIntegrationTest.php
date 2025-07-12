@@ -5,7 +5,7 @@ namespace TomasManuelTM\ApyPayment\Tests\Feature;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
-use TomasManuelTM\ApyPayment\Services\IPayService;
+use TomasManuelTM\ApyPayment\Services\ApyService;
 use TomasManuelTM\ApyPayment\Tests\TestCase;
 
 
@@ -16,7 +16,7 @@ class ApiIntegrationTest extends TestCase
         $mock = new MockHandler($responses);
         $handler = HandlerStack::create($mock);
         
-        return new IPayService($handler);
+        return new ApyService($handler);
     }
 
     /** @test */

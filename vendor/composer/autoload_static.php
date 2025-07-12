@@ -39,7 +39,7 @@ class ComposerStaticInitabd256a43a6d5700bacc2f5a99a323cb
         'ce9671a430e4846b44e1c68c7611f9f5' => __DIR__ . '/..' . '/mockery/mockery/library/Mockery.php',
         'ec07570ca5a812141189b1fa81503674' => __DIR__ . '/..' . '/phpunit/phpunit/src/Framework/Assert/Functions.php',
         '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
-        '3f1f6a53a9894a421d7c3f06b1496410' => __DIR__ . '/../..' . '/src/Helpers/functions.php',
+        'd88111ec0ff59e801b55ea472369e3aa' => __DIR__ . '/../..' . '/src/Helpers/Money.php',
     );
 
     public static $prefixLengthsPsr4 = array (
