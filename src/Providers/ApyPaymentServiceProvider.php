@@ -7,7 +7,7 @@ use TomasManuelTM\ApyPayment\Services\ApyService;
 use TomasManuelTM\ApyPayment\Services\ApyPaymentService;
 use TomasManuelTM\ApyPayment\Console\Commands\CheckTokenExpiration;
 use TomasManuelTM\ApyPayment\Console\Commands\PublishApyPayment;
-use TomasManuelTM\ApyPayment\Facades\ApyFacade;
+use TomasManuelTM\ApyPayment\Facades\ApyPaymentFacade;
 
 class ApyPaymentServiceProvider extends ServiceProvider
 {
@@ -77,7 +77,7 @@ class ApyPaymentServiceProvider extends ServiceProvider
             return new ApyPaymentService($app['config']->get('apypayment'));
         });
 
-        $this->app->alias('ApyService', ApyFacade::class);
+        $this->app->alias('ApyService', ApyPaymentFacade::class);
     }
 
     /**
