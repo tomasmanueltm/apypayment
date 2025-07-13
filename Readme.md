@@ -41,11 +41,9 @@ php artisan vendor:publish --provider="TomasManuelTM\ApyPayment\Providers\ApyPay
 Adicione ao seu arquivo `.env`:
 
 ```ini
-APY_API_URL=https://api.payment.com
-APY_AUTH_URL=https://auth.payment.com
+APY_API_TYPE=Local // Prodution 
 APY_CLIENT_ID=seu_client_id
 APY_CLIENT_SECRET=seu_client_secret
-APY_RESOURCE=seu_resource_id
 ```
 
 ## 🚀 Uso Básico
