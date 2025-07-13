@@ -73,8 +73,12 @@ class ApyPaymentServiceProvider extends ServiceProvider
         $this->app->singleton('ApyService', function ($app) {
             return new ApyService($app['config']->get('apypayment'));
         });
-        $this->app->singleton('ApyPaymentService', function ($app) {
-            return new ApyPaymentService($app['config']->get('apypayment'));
+
+        $this->app->singleton(ApyService::class, function ($app) {
+            $httpClient = new \GuzzleHttp\Client(); 
+            $authService = new ApyAuthService($httpClient); 
+            
+            return new ApyService($authService); // Passa o ApyAuthService corretamente
         });
 
         $this->app->alias('ApyService', ApyPaymentFacade::class);

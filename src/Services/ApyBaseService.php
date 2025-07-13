@@ -2,6 +2,7 @@
 
 namespace TomasManuelTM\ApyPayment\Services;
 
+use TomasManuelTM\ApyPayment\Models\ApySys;
 use TomasManuelTM\ApyPayment\Models\ApyPayment;
 
 abstract class ApyBaseService
@@ -19,7 +20,8 @@ abstract class ApyBaseService
         
         return $prefix . str_pad($lastNum + 1, 9, '0', STR_PAD_LEFT);
     }
-
+    
+    
     protected function getRequestHeaders(string $token): array
     {
         return [
@@ -48,5 +50,18 @@ abstract class ApyBaseService
             'updatedDate' => Carbon::parse($apiData['updatedDate']),
             'reference' => json_encode($apiData['reference'] ?? []),
         ];
+    }
+
+    /**
+     * Gera uma referência única para pagamento
+    */
+    public function generateReference(): string
+    {
+        do {
+            $reference = mt_rand(100000000, 999999999);
+            $exists = ApySys::where('reference->referenceNumber', $reference)->exists();
+        } while ($exists);
+
+        return (string) $reference;
     }
 }

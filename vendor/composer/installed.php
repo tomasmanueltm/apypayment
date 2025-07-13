@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'tomasmanueltm/apypayment',
-        'pretty_version' => 'dev-developer',
-        'version' => 'dev-developer',
-        'reference' => '650b4fa4e30a8cc4729f11c81fe57686e3086746',
+        'pretty_version' => 'dev-master',
+        'version' => 'dev-master',
+        'reference' => '7d9110187ec3ddea340ab3979dca5632f75c5ebd',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -1263,9 +1263,9 @@
             'dev_requirement' => false,
         ),
         'tomasmanueltm/apypayment' => array(
-            'pretty_version' => 'dev-developer',
-            'version' => 'dev-developer',
-            'reference' => '650b4fa4e30a8cc4729f11c81fe57686e3086746',
+            'pretty_version' => 'dev-master',
+            'version' => 'dev-master',
+            'reference' => '7d9110187ec3ddea340ab3979dca5632f75c5ebd',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

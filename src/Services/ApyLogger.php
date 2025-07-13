@@ -31,7 +31,8 @@ class ApyLogger
         $this->info('Pagamento processado com sucesso', [
             'id_transacao' => $response['id'] ?? null,
             'status' => $response['status'] ?? null,
-            'valor' => $response['amount'] ?? null
+            'valor' => $response['amount'] ?? null,
+            'reference' => $response['responseStatus']['reference']['referenceNumber'] ?? null
         ]);
     }
 

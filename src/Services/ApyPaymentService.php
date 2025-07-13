@@ -12,7 +12,7 @@ use TomasManuelTM\ApyPayment\Models\ApyToken;
 use TomasManuelTM\ApyPayment\Models\ApyPayment;
 use RuntimeException;
 
-class ApyService
+class ApyServicesssssss
 {
     private Client $client;
     private string $authUrl;
