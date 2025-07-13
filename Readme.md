@@ -28,12 +28,14 @@ O *ApyPayment* é um pacote Laravel completo para integração com sistema de pa
 
 ```bash
 composer require tomasmanueltm/apypayment
+
 ````
 
 Publique os arquivos necessários:
 
 ```bash
-php artisan vendor:publish --provider="TomasManuelTM\ApyPayment\Providers\ApyPaymentServiceProvider"
+php artisan apypayment:publish    
+
 ```
 
 ## ⚙️ Configuração
