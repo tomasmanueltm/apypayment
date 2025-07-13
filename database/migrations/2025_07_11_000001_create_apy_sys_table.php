@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::create('apy_payments', function (Blueprint $table) {
+        Schema::create('apy_sys', function (Blueprint $table) {
             $table->id('idPayment');
             $table->uuid('id')->nullable();
             $table->string('merchantTransactionId');
@@ -35,6 +35,6 @@ return new class extends Migration
 
     public function down()
     {
-        Schema::dropIfExists('apy_payments');
+        Schema::dropIfExists('apy_sys');
     }
 };

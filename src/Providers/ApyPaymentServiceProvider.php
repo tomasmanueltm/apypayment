@@ -4,6 +4,7 @@ namespace TomasManuelTM\ApyPayment\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use TomasManuelTM\ApyPayment\Services\ApyService;
+use TomasManuelTM\ApyPayment\Services\ApyPaymentService;
 use TomasManuelTM\ApyPayment\Console\Commands\CheckTokenExpiration;
 use TomasManuelTM\ApyPayment\Console\Commands\PublishApyPayment;
 use TomasManuelTM\ApyPayment\Facades\ApyFacade;
@@ -71,6 +72,9 @@ class ApyPaymentServiceProvider extends ServiceProvider
     {
         $this->app->singleton('ApyService', function ($app) {
             return new ApyService($app['config']->get('apypayment'));
+        });
+        $this->app->singleton('ApyPaymentService', function ($app) {
+            return new ApyPaymentService($app['config']->get('apypayment'));
         });
 
         $this->app->alias('ApyService', ApyFacade::class);
