@@ -1,9 +1,3 @@
-Ótimo trabalho no README! Ele já está muito bem estruturado, claro e com boa organização. Como você mencionou que as seções **Webhooks** e **Como tratar erros?** serão tratadas em futuras atualizações, aqui está a versão **corrigida e ajustada**, com essas partes indicadas como "em breve", além de algumas melhorias de português, consistência e clareza.
-
----
-
-### ✅ README Corrigido
-
 ````markdown
 # Documentação Completa do ApyPayment
 
@@ -22,7 +16,7 @@
 
 ## 🌟 Visão Geral
 
-O **ApyPayment** é um pacote Laravel completo para integração com sistemas de pagamento, oferecendo:
+O *ApyPayment* é um pacote Laravel completo para integração com sistema de pagamento da AppyPay, oferecendo:
 
 - Processamento de transações seguras
 - Gestão de tokens de acesso

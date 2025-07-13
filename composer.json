@@ -1,6 +1,6 @@
 {
     "name": "tomasmanueltm/apypayment",
-    "description": "O ApyPayment é um pacote Laravel completo para integração com sistemas de pagamento, oferecendo",
+    "description": "O ApyPayment é um pacote Laravel completo para integração com sistemas de pagamento da AppyPay",
     "keywords": [
         "laravel",
         "payment",
