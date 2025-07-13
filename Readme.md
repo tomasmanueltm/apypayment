@@ -1,3 +1,10 @@
+Ótimo trabalho no README! Ele já está muito bem estruturado, claro e com boa organização. Como você mencionou que as seções **Webhooks** e **Como tratar erros?** serão tratadas em futuras atualizações, aqui está a versão **corrigida e ajustada**, com essas partes indicadas como "em breve", além de algumas melhorias de português, consistência e clareza.
+
+---
+
+### ✅ README Corrigido
+
+````markdown
 # Documentação Completa do ApyPayment
 
 ## 📌 Índice
@@ -15,7 +22,7 @@
 
 ## 🌟 Visão Geral
 
-O ApyPayment é um pacote Laravel completo para integração com sistemas de pagamento, oferecendo:
+O **ApyPayment** é um pacote Laravel completo para integração com sistemas de pagamento, oferecendo:
 
 - Processamento de transações seguras
 - Gestão de tokens de acesso
@@ -27,7 +34,7 @@ O ApyPayment é um pacote Laravel completo para integração com sistemas de pag
 
 ```bash
 composer require tomasmanueltm/apypayment
-```
+````
 
 Publique os arquivos necessários:
 
@@ -37,7 +44,7 @@ php artisan vendor:publish --provider="TomasManuelTM\ApyPayment\Providers\ApyPay
 
 ## ⚙️ Configuração
 
-Adicione no seu `.env`:
+Adicione ao seu arquivo `.env`:
 
 ```ini
 APY_API_URL=https://api.payment.com
@@ -56,8 +63,9 @@ use TomasManuelTM\ApyPayment\Facades\ApyPayment;
 
 $payment = ApyPayment::createPayment([
     'amount' => 100.00,
-    'currency' => 'BRL',
-    'reference' => 'ORD-12345'
+    'currency' => 'AOA',
+    'reference' => '123450000',
+    'description' => 'Pagamento -12345',
 ]);
 ```
 
@@ -72,30 +80,17 @@ $payments = ApyPayment::searchPayments([
 
 ## 🔧 Métodos Principais
 
-| Método                                 | Parâmetros | Retorno | Descrição          |
-|----------------------------------------|------------|---------|--------------------|
-| `getAccessToken()`                     | - | `string|null` | Obtém token de acesso |
-| `createPayment(array $data)` | Dados do pagamento | `array` | Cria nova transação |
-| `capturePayment(string $id)` | ID do pagamento | `array` | Captura pagamento autorizado |
-| `refundPayment(string $id, float $amount = null)` | ID e valor | `array` | Estorna transação |
-| `getPaymentStatus(string $id)` | ID do pagamento | `array` | Consulta status |
+| Método                                                               | Parâmetros                         | Retorno  | Descrição                      |                         |
+| -------------------------------------------------------------------- | ---------------------------------- | -------- | ------------------------------ | ----------------------- |
+| `getAccessToken()`                                                   | –                                  | \`string | null\`                         | Obtém o token de acesso |
+| `createPayment(array $data)`                                         | Dados do pagamento                 | `array`  | Cria uma nova transação        |                         |
+| `capturePayment(string $merchantTransactionId)`                      | ID da transação do comerciante     | `array`  | Captura o pagamento autorizado |                         |
+| `refundPayment(string $merchantTransactionId, float $amount = null)` | ID da transação e valor (opcional) | `array`  | Estorna uma transação          |                         |
+| `getPaymentStatus(string $merchantTransactionId)`                    | ID da transação do comerciante     | `array`  | Consulta o status do pagamento |                         |
 
 ## 🌐 Webhooks
 
-Configure sua rota:
-
-```php
-Route::post('/apy/webhook', function(Request $request) {
-    return ApyPayment::handleWebhook($request->all());
-});
-```
-
-### Eventos disponíveis:
-
-- `payment.created`
-- `payment.completed`
-- `payment.failed`
-- `payment.refunded`
+> ⚠️ **Esta funcionalidade estará disponível em uma futura atualização.**
 
 ## 🎨 Customização
 
@@ -114,7 +109,7 @@ ApyPayment::addUpdateRule(
 ### 2. Prefixos customizados:
 
 ```php
-// No config/apypayment.php
+// No arquivo config/apypayment.php
 'prefixes' => [
     'default' => 'PS',
     'renewal' => 'PC',
@@ -138,41 +133,29 @@ composer test-coverage
 
 ## ❓ FAQ
 
-### Como tratar erros?
-
-```php
-try {
-    $payment = ApyPayment::createPayment($data); 
-} catch (\TomasManuelTM\ApyPayment\Exceptions\PaymentException $e) {
-    // Tratamento personalizado
-}
-```
-
-### Como debugar problemas?
-
-Ative os logs detalhados no `.env`:
-
-```ini
-APY_DEBUG=true
-```
+> ⚠️ **A seção de tratamento de erros será expandida em uma próxima versão.**
 
 ## 🤝 Contribuição
 
 1. Faça um fork do projeto
-2. Crie sua branch (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
+2. Crie uma branch (`git checkout -b feature/SuaFuncionalidade`)
+3. Faça commit das mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
+4. Faça push para sua branch (`git push origin feature/SuaFuncionalidade`)
 5. Abra um Pull Request
 
 ## 📄 Licença
 
-Distribuído sob a licença MIT. Veja `LICENSE` para mais informações.
+Direitos autorais (c) 2025 **TomasManuelTM**
+
+É concedida permissão, gratuitamente, a qualquer pessoa que obtenha uma cópia deste software e seus arquivos de documentação (o “Software”), para usar, copiar, modificar, mesclar, publicar, distribuir, sublicenciar e/ou vender cópias do Software, e permitir o mesmo a terceiros, desde que os avisos de direitos autorais e esta permissão estejam incluídos em todas as cópias relevantes.
+
+O SOFTWARE É FORNECIDO “NO ESTADO EM QUE SE ENCONTRA”, SEM GARANTIAS DE QUALQUER TIPO, EXPRESSAS OU IMPLÍCITAS, INCLUINDO, MAS NÃO SE LIMITANDO A GARANTIAS DE COMERCIALIZAÇÃO, ADEQUAÇÃO A UM FIM ESPECÍFICO E NÃO VIOLAÇÃO. EM NENHUMA CIRCUNSTÂNCIA OS AUTORES SERÃO RESPONSÁVEIS POR QUAISQUER DANOS OU RESPONSABILIDADES DECORRENTES DO USO DESTE SOFTWARE.
 
 ## ✉️ Contato
 
-Tomas Manuel - [GitHub](https://github.com/tomasmanueltm) - **antoniomanuelbaptistabaptista@gmail.com**
+Tomas Manuel — [GitHub](https://github.com/tomasmanueltm) — **[antoniomanuelbaptistabaptista@gmail.com](mailto:antoniomanuelbaptistabaptista@gmail.com)**
 
 ---
 
-Documentação atualizada em: **12.07.2025**  
+Documentação atualizada em: **12/07/2025**
 Versão do pacote: **1.0.0**
