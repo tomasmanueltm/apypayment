@@ -37,6 +37,8 @@ return [
     'content_type' => 'application/json',
 
 
+
+
     /*
     |--------------------------------------------------------------------------
     | Configurações de Pagamento
@@ -49,9 +51,17 @@ return [
         'default' => 'PS',
         'renewal' => 'PC',
     ],
+
+    /*
+    * Tableas 
+    */
+
+    'storage' => [
+        'default_table' => 'apy_sys'
+    ],
     
     'tables' => [
-        'apy_payments' => [
+        'apy_sys' => [
             'columns' => [
                 'reference' => 'reference->referenceNumber',
                 'merchant_transaction_id' => 'merchantTransactionId'
@@ -81,11 +91,21 @@ return [
         ]*/
     ],
     
-    'storage' => [
-        'default_table' => 'apy_payments'
-    ],
+
+    /*
+    * Http Parametros 
+    */
+
+    'http_verify_ssl' => false,
+    'http_timeout' => 30,
 
 
+    
+
+
+    /*
+    * Jobs  
+    */
     'token_check' => [
         'driver' => env('DB_CONNECTION', 'mysql'), // Define o driver padrão
         'batch_size' => 1000, // Para processamento em lotes

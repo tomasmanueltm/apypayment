@@ -3,11 +3,14 @@
 namespace TomasManuelTM\ApyPayment\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use TomasManuelTM\ApyPayment\Services\ApyAuth;
+use TomasManuelTM\ApyPayment\Services\ApyLogger;
 use TomasManuelTM\ApyPayment\Services\ApyService;
 use TomasManuelTM\ApyPayment\Services\ApyPaymentService;
 use TomasManuelTM\ApyPayment\Console\Commands\CheckTokenExpiration;
 use TomasManuelTM\ApyPayment\Console\Commands\PublishApyPayment;
 use TomasManuelTM\ApyPayment\Facades\ApyPaymentFacade;
+use GuzzleHttp\Client;
 
 class ApyPaymentServiceProvider extends ServiceProvider
 {
@@ -70,18 +73,42 @@ class ApyPaymentServiceProvider extends ServiceProvider
      */
     protected function registerMainService()
     {
+        // Registro do ApyService com alias para facade
         $this->app->singleton('ApyService', function ($app) {
-            return new ApyService($app['config']->get('apypayment'));
-        });
-
-        $this->app->singleton(ApyService::class, function ($app) {
-            $httpClient = new \GuzzleHttp\Client(); 
-            $authService = new ApyAuthService($httpClient); 
+            $httpClient = new Client([
+                'timeout' => config('apypayment.http_timeout', 30),
+                'verify' => config('apypayment.http_verify_ssl', false),
+            ]);
             
-            return new ApyService($authService); // Passa o ApyAuthService corretamente
+            $authService = new ApyAuth($httpClient);
+            return new ApyService($authService);
         });
 
+
+        // Registro adicional para injeção de dependência por classe
+        $this->app->singleton(ApyService::class, function ($app) {
+            return $app->make('ApyService');
+        });
+        
+       // Registro do Logger e Base
+        $this->app->singleton(ApyLogger::class, function ($app) {
+            return new ApyLogger();
+        });
+        // Registro do Logger
+         $this->app->singleton(ApyBase::class, function ($app) {
+             return new ApyBase();
+         });
+        
+        // Registro do Logger e Base com alias para facilitar acesso
+        $this->app->alias(ApyLogger::class, 'apylogger');
+        $this->app->alias(ApyBase::class, 'apybase');
+        
+        
+
+        // Registro do facade
         $this->app->alias('ApyService', ApyPaymentFacade::class);
+
+        
     }
 
     /**
@@ -91,7 +118,7 @@ class ApyPaymentServiceProvider extends ServiceProvider
     {
         $this->publishes([
             __DIR__.'/../../config/apypayment.php' => config_path('apypayment.php'),
-        ], 'apypayment-config');
+        ], ['apypayment-config', 'apypayment']);
     }
 
     /**
@@ -101,7 +128,7 @@ class ApyPaymentServiceProvider extends ServiceProvider
     {
         $this->publishes([
             __DIR__.'/../../database/migrations' => database_path('migrations'),
-        ], 'apypayment-migrations');
+        ], ['apypayment-migrations', 'apypayment']);
     }
 
     /**
@@ -112,7 +139,7 @@ class ApyPaymentServiceProvider extends ServiceProvider
         if (is_dir($seedersPath = __DIR__.'/../../database/seeders')) {
             $this->publishes([
                 $seedersPath => database_path('seeders'),
-            ], 'apypayment-seeders');
+            ], ['apypayment-seeders', 'apypayment']);
         }
     }
 

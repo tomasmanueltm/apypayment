@@ -5,7 +5,7 @@ namespace TomasManuelTM\ApyPayment\Services;
 use TomasManuelTM\ApyPayment\Models\ApySys;
 use TomasManuelTM\ApyPayment\Models\ApyPayment;
 
-abstract class ApyBaseService
+abstract class ApyBase
 {
     protected function generateMerchantId(bool $isRenewal = false, ?string $customPrefix = null): string
     {

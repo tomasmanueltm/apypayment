@@ -8,22 +8,27 @@ class ApyLogger
 {
     public function info(string $message, array $context = []): void
     {
-        Log::info("[APY] $message", $context);
+        Log::info("[APYPAYMENT] $message", $context);
     }
 
     public function error(string $message, array $context = []): void
     {
-        Log::error("[APY] $message", $context);
+        Log::error("[APYPAYMENT] $message", $context);
+    }
+
+    public function success(string $message, array $context = []): void
+    {
+        Log::warning("[APYPAYMENT] $message", $context);
     }
 
     public function warning(string $message, array $context = []): void
     {
-        Log::warning("[APY] $message", $context);
+        Log::warning("[APYPAYMENT] $message", $context);
     }
 
     public function debug(string $message, array $context = []): void
     {
-        Log::debug("[APY] $message", $context);
+        Log::debug("[APYPAYMENT] $message", $context);
     }
 
     public function paymentSuccess(array $response): void

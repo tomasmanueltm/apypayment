@@ -4,7 +4,7 @@ namespace TomasManuelTM\ApyPayment\Services;
 
 use ApyLogger;
 use Carbon\Carbon;
-use TomasManuelTM\ApyPayment\Services\ApyAuthService;
+use TomasManuelTM\ApyPayment\Services\ApyAuth;
 use ApyBaseService;
 use RuntimeException;
 use Illuminate\Support\Collection;
@@ -15,9 +15,9 @@ use TomasManuelTM\ApyPayment\Models\ApyPayment;
 
 class ApyService
 {
-    public ApyAuthService $client;
+    private ApyAuth $client;
 
-    public function __construct(ApyAuthService $auth) {
+    public function __construct(ApyAuth $auth) {
         $this->client = $auth;
     }
 

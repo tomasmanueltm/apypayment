@@ -8,7 +8,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\Log;
 use TomasManuelTM\ApyPayment\Models\ApyToken;
 
-class ApyAuthService
+class ApyAuth
 {
     public Client $client;
     private string $authUrl;
@@ -107,7 +107,7 @@ class ApyAuthService
             }
             return $this->generateToken();
         } catch (GuzzleException $e) {
-            Log::error('Erro na autenticação com a API: ' . $e->getMessage());
+            app('apylogger')->error('generateToken', ['Erro na autenticação com a API '=> $e->getMessage()]);
             return null;
         }
     }
@@ -129,9 +129,10 @@ class ApyAuthService
                     'istoken' => true,
                 ]
             );
-            Log::debug('Token armazenado no banco de dados');
+            app('apylogger')->sucess('generateToken', ['Token armazenado no banco de dados '=> $e->getMessage()]);
         } catch (\Exception $e) {
-            Log::error('Falha ao armazenar token: ' . $e->getMessage());
+            app('apylogger')->error('generateToken', ['Falha ao armazenar token '=> $e->getMessage()]);
+
         }
     }
 
@@ -151,7 +152,7 @@ class ApyAuthService
             
             return $this->accessToken = $data['access_token'];
         } catch (GuzzleException $e) {
-            Log::error('Erro ao gerar token: ' . $e->getMessage());
+            app('apylogger')->error('generateToken', ['Erro ao gerar token'=> $e->getMessage()]);
             return null;
         }
     }
