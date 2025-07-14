@@ -16,7 +16,7 @@ class ApyAuth
     private string $clientSecret;
     private string $resource;
     private ?string $accessToken = null;
-    private string $apiUrl;
+    public string $apiUrl;
 
     public function __construct(Client $client)
     {
@@ -121,7 +121,7 @@ class ApyAuth
     {
         try {
             ApyToken::updateOrCreate(
-                ['istoken' => true],
+                ['istoken' => false],
                 [
                     'token' => $tokenData['access_token'],
                     'expires_on' => $tokenData['expires_on'],
@@ -129,10 +129,9 @@ class ApyAuth
                     'istoken' => true,
                 ]
             );
-            app('apylogger')->sucess('generateToken', ['Token armazenado no banco de dados '=> $e->getMessage()]);
+            app('apylogger')->success('generateToken', ['Token armazenado no banco de dados '=> $e->getMessage()]);
         } catch (\Exception $e) {
             app('apylogger')->error('generateToken', ['Falha ao armazenar token '=> $e->getMessage()]);
-
         }
     }
 
@@ -156,4 +155,66 @@ class ApyAuth
             return null;
         }
     }
+
+
+    /*
+    * Metodos de HttpClients    *
+    * @param string $token Token de acesso
+    *    
+    */
+    protected function getRequestHeaders(string $token): array
+    {
+        return [
+            'Accept-Language' => config('apypayment.accept_language'),
+            'Accept' => config('apypayment.accept'),
+            'Content-Type' => config('apypayment.content_type'),
+            'Authorization' => 'Bearer ' . $token,
+        ];
+    }
+
+    
+    /**
+     * Obtém a lista de métodos de pagamento disponíveis
+     * @return Response|null Resposta da API ou null em caso de falha
+    */
+    public  function applications() : ?\Psr\Http\Message\ResponseInterface 
+    {
+        $token = $this->getAccessToken();
+        if (!$token) {
+            app('apylogger')->error('applications', ['Falha ao obter token de acesso ']);
+            return null;
+        }
+
+        $response = $this->client->get($this->apiUrl . '/applications', [
+            'headers' => $this->getRequestHeaders($token) 
+        ]);
+        return $response;
+    }
+
+    /**
+     * Obtém a lista de pagamentos
+     * @param string $token Token de acesso
+     * @return Response|null Resposta da API ou null em caso de falha   
+     * */
+    
+    public function payments(): ?\Psr\Http\Message\ResponseInterface
+    {
+        try {
+            $token = $this->getAccessToken();
+            if (!$token) {
+                app('apylogger')->error('payments', ['Falha ao obter token de acesso ']);
+                return null;
+            }
+
+            $response = $this->client->get($this->apiUrl . '/charges?limit=100000000', [
+                'headers' => $this->getRequestHeaders($token)
+            ]);
+            return $response;
+        } catch (GuzzleException $e) {
+            app('apylogger')->error('payments', ['Erro ao obter pagamentos '=> $e->getMessage()]);
+            return null;
+        }
+    }
+
+
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace TomasManuelTM\ApyPayment\Services;
+namespace TomasManuelTM\ApyPayment\Logs;
 
 use Illuminate\Support\Facades\Log;
 

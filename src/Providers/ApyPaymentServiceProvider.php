@@ -3,8 +3,8 @@
 namespace TomasManuelTM\ApyPayment\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use TomasManuelTM\ApyPayment\Logs\ApyLogger;
 use TomasManuelTM\ApyPayment\Services\ApyAuth;
-use TomasManuelTM\ApyPayment\Services\ApyLogger;
 use TomasManuelTM\ApyPayment\Services\ApyService;
 use TomasManuelTM\ApyPayment\Services\ApyPaymentService;
 use TomasManuelTM\ApyPayment\Console\Commands\CheckTokenExpiration;
@@ -21,6 +21,7 @@ class ApyPaymentServiceProvider extends ServiceProvider
     {
         $this->registerConfiguration();
         $this->registerMainService();
+        $this->registerSharedServices();
     }
 
     /**
@@ -84,32 +85,37 @@ class ApyPaymentServiceProvider extends ServiceProvider
             return new ApyService($authService);
         });
 
-
         // Registro adicional para injeção de dependência por classe
         $this->app->singleton(ApyService::class, function ($app) {
             return $app->make('ApyService');
         });
-        
-       // Registro do Logger e Base
+            
+
+        // Registro do facade
+        $this->app->alias('ApyService', ApyPaymentFacade::class);
+    }
+
+
+    protected function registerSharedServices()
+    {
+        // Registro do Logger
         $this->app->singleton(ApyLogger::class, function ($app) {
             return new ApyLogger();
         });
-        // Registro do Logger
+        
+        // Registro do Logger com alias para facilitar acesso
+        $this->app->alias(ApyLogger::class, 'apylogger');
+        
+        // Registro do BaseService 
          $this->app->singleton(ApyBase::class, function ($app) {
              return new ApyBase();
          });
         
-        // Registro do Logger e Base com alias para facilitar acesso
-        $this->app->alias(ApyLogger::class, 'apylogger');
+        // Registro do Base com alias para facilitar acesso
         $this->app->alias(ApyBase::class, 'apybase');
-        
-        
-
-        // Registro do facade
-        $this->app->alias('ApyService', ApyPaymentFacade::class);
-
-        
     }
+
+
 
     /**
      * Publica o arquivo de configuração.
