@@ -15,11 +15,11 @@ class ApyPayment extends Model
         'description',
         'status',
         'amount',
-        'dueDate',
+        'expiration',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
-        'dueDate' => 'datetime'
+        'expiration' => 'datetime'
     ];
 }

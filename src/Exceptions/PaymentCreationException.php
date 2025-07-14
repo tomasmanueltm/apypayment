@@ -2,6 +2,8 @@
 
 namespace TomasManuelTM\ApyPayment\Exceptions;
 
+use TomasManuelTM\ApyPayment\Exceptions\PaymentException;
+
 class PaymentCreationException extends PaymentException
 {
     public function __construct(array $context = [], Exception $previous = null)

@@ -42,4 +42,37 @@ class ApyService extends ApyBase
     }
 
 
-}
+    public function createPayment(array $json) {
+        // $reference = isset($json['reference']) ? $json['reference'] : $this->generateReference();
+        // $json['reference'] = $reference;
+      return  $this->auth->create($json);
+    }
+
+
+}/*
+
+
+    public function createPayment(array $json, $merchantTransactionId): ?\Psr\Http\Message\ResponseInterface
+    {
+        $token = $this->getAccessToken();
+        if (!$token) {
+            app('apylogger')->error('createPayment', ['Falha ao obter token de acesso']);
+            return null;
+        }
+
+        try {
+            $json['merchantTransactionId'] = $merchantTransactionId;
+            $json['currency'] = config('apypayment.default_currency', 'AOA');
+            $json['paymentMethod'] = $this->getPaymentType(config('apypayment.default_payment_method'));
+
+            $response = $this->client->post($this->apiUrl . '/charges', [
+                'headers' => $this->getRequestHeaders($token),
+                'json' => $json,
+            ]);
+            return $response;
+        } catch (\Exception $e) {
+            app('apylogger')->error('createPayment', ['Erro ao criar pagamento'=> $e->getMessage()]);
+            return null;
+        }
+    }
+*/

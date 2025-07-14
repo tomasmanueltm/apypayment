@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('merchantTransactionId')->nullable();
             $table->decimal('amount', 10, 2)->nullable();
             $table->text('description')->nullable();
-            $table->date('dueDate')->default(now()->days(30))->nullable();
+            $table->date('expiration')->default(now()->days(30))->nullable();
             $table->enum('status', ['Pending', 'Success', 'Requested'])->nullable()->default('Pending');
             $table->timestamps();
         });

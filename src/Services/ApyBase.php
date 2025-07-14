@@ -3,12 +3,12 @@
 namespace TomasManuelTM\ApyPayment\Services;
 
 use Carbon\Carbon;
-use \Psr\Http\Message\ResponseInterface as IJson;
 use TomasManuelTM\ApyPayment\Models\ApySys;
 use TomasManuelTM\ApyPayment\Models\ApyMethod;
 use TomasManuelTM\ApyPayment\Models\ApyPayment;
+use \Psr\Http\Message\ResponseInterface as IJson;
 
-abstract class ApyBase
+class ApyBase extends ApyRepository
 {
     /*
     * Metodos de HttpClients
@@ -16,20 +16,7 @@ abstract class ApyBase
 
 
 
-    protected function applications($token, ){
-        $response =  $this->client->get($this->apiUrl . '/applications', [
-                    'headers' => $this->getRequestHeaders($token)
-        ]);
-
-        return $this;
-    }
-
-
-
-
-
-
-    protected function generateMerchantId(bool $isRenewal = false, ?string $customPrefix = null): string
+    private function generateMerchantIdOld(bool $isRenewal = false, ?string $customPrefix = null): string
     {
         $prefixes = config('apypayment.prefixes');
         $prefix = $customPrefix ?? ($isRenewal ? $prefixes['renewal'] : $prefixes['default']);
@@ -67,15 +54,7 @@ abstract class ApyBase
     /**
      * Gera uma referência única para pagamento
     */
-    public function generateReference(): string
-    {
-        do {
-            $reference = mt_rand(100000000, 999999999);
-            $exists = ApySys::where('reference->referenceNumber', $reference)->exists();
-        } while ($exists);
 
-        return (string) $reference;
-    }
 
 
     /**
@@ -89,7 +68,7 @@ abstract class ApyBase
     /*
     *  Registrar metodos de pagamento 
     */
-    protected function setMethods(IJson $array): void
+    public function setMethods(IJson $array): void
     {
         $payments =  $this->isSucess($array) ? ($this->isSucess($array)) : [];
  
@@ -121,7 +100,7 @@ abstract class ApyBase
      * @param array $payment Dados brutos do pagamento recebidos da API
      * @return void
     */
-    protected function setPayments(IJson $array): void
+    public function setPayments(IJson $array): void
     {
         $payments = $this->isSucess($array) ? ($this->isSucess($array)) : [];
         try {

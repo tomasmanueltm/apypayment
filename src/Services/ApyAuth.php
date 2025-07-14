@@ -5,10 +5,25 @@ namespace TomasManuelTM\ApyPayment\Services;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
-use Illuminate\Support\Facades\Log;
-use TomasManuelTM\ApyPayment\Models\ApyToken;
+use TomasManuelTM\ApyPayment\Models\{
+    ApySys,
+    ApyToken,
+    ApyMethod,
+    ApyPayment,
+};
 
-class ApyAuth
+use TomasManuelTM\ApyPayment\Exceptions\{
+    InvalidRequestException,
+    MerchantIdGenerationException,
+    PaymentCreationException,
+    PaymentNotFoundException
+};
+use Illuminate\Support\Facades\DB;
+use \Psr\Http\Message\ResponseInterface as IJson;
+use TomasManuelTM\ApyPayment\Services\ApyRepository;
+
+
+class ApyAuth extends ApyRepository
 {
     public Client $client;
     private string $authUrl;
@@ -17,11 +32,15 @@ class ApyAuth
     private string $resource;
     private ?string $accessToken = null;
     public string $apiUrl;
-
+    private $logger;
+    
     public function __construct(Client $client)
     {
         $this->client = $client;
         $this->initializeConfig();
+        $this->logger = app('apylogger');
+
+
     }
 
     /**
@@ -52,7 +71,22 @@ class ApyAuth
                 'Content-Type' => config('apypayment.content_type', 'application/json'),
             ],
         ]);
+
     }
+
+    /**
+     * Configura o cliente HTTP para não lançar exceções automaticamente
+     */
+    private function disableHttpErrors(): void
+    {
+        // Método recomendado - recriar o client com nova configuração
+        $config = array_merge($this->client->getConfig(), [
+            'http_errors' => false
+        ]);
+        
+        $this->client = new \GuzzleHttp\Client($config);
+    }
+
 
     /*
     * Parametros para obter token
@@ -112,6 +146,32 @@ class ApyAuth
         }
     }
 
+        /**
+     * Busca o tipo de pagamento com fallback para o método padrão
+     * 
+     * @param string $type Método de pagamento a ser pesquisado
+     * @return string Tipo de pagamento encontrado ou o padrão
+     * @throws \RuntimeException Quando nenhum método é encontrado
+     */
+    private function getMethods(string $type): string
+    {
+        // Busca o método específico
+        $paymentMethod = ApyMethod::where('method', $type)->first();
+        
+        if ($paymentMethod) {
+            return $paymentMethod->type;
+        }
+        
+        // Fallback para o método padrão
+        $defaultMethod = ApyMethod::where('isDefault', true)->first();
+        
+        if (!$defaultMethod) {
+            $this->logger->error('getMethods', ['Nenhum método de pagamento padrão configurado']);
+        }
+        
+        return $defaultMethod->type;
+    }
+
     /*
     * Guardar token no database
     * @param array $tokenData Dados do token a serem armazenados
@@ -129,7 +189,7 @@ class ApyAuth
                     'istoken' => true,
                 ]
             );
-            app('apylogger')->success('generateToken', ['Token armazenado no banco de dados '=> $e->getMessage()]);
+            app('apylogger')->success('generateToken', ['Token armazenado no banco de dados ']);
         } catch (\Exception $e) {
             app('apylogger')->error('generateToken', ['Falha ao armazenar token '=> $e->getMessage()]);
         }
@@ -157,6 +217,39 @@ class ApyAuth
     }
 
 
+    /**
+     * Obtém a tabela padrão para armazenamento
+    */
+    public function getDefaultStorageTable(): string
+    {
+        return config('apypayment.storage.default_table', 'apy_payments');
+    }
+
+
+    private function defaultPaymentTable(array $data): void
+    {
+        $this->logger->info('defaultPaymentTable', ['Dados do pagamento' => $data]);
+       // Define quais campos são permitidos para inserção
+        $allowedFields = [
+            'reference',
+            'merchantTransactionId', 
+            'type',
+            'description',
+            'status',
+            'amount',
+            'expiration'
+        ];
+
+        // Filtra apenas os campos permitidos
+        $filteredData = array_intersect_key($data, array_flip($allowedFields));
+
+        // Insere os dados filtrados
+        ApyPayment::insert($filteredData);
+        // DB::table($this->getDefaultStorageTable())->create($data);
+    }
+
+
+
     /*
     * Metodos de HttpClients    *
     * @param string $token Token de acesso
@@ -172,12 +265,15 @@ class ApyAuth
         ];
     }
 
+
+
+    /**ENDPOINTS APPYPAY**/ 
     
     /**
      * Obtém a lista de métodos de pagamento disponíveis
      * @return Response|null Resposta da API ou null em caso de falha
     */
-    public  function applications() : ?\Psr\Http\Message\ResponseInterface 
+    public  function applications() : ? IJson
     {
         $token = $this->getAccessToken();
         if (!$token) {
@@ -197,7 +293,7 @@ class ApyAuth
      * @return Response|null Resposta da API ou null em caso de falha   
      * */
     
-    public function payments(): ?\Psr\Http\Message\ResponseInterface
+    public function payments(): ?IJson
     {
         try {
             $token = $this->getAccessToken();
@@ -216,5 +312,178 @@ class ApyAuth
         }
     }
 
+    /**
+     * Obtém a lista de pagamentos e atualizar os registros
+     * @param string $token Token de acesso
+     * @return Response|null Resposta da API ou null em caso de falha   
+     * */
+    public function paymentsRefresh() : void
+    {
+        try {
+            $token = $this->getAccessToken();
+            if (!$token) {
+                app('apylogger')->error('paymentsRefresh', ['Falha ao obter token de acesso ']);
+            }
 
+            $response = $this->client->get($this->apiUrl . '/charges?limit=100000000', [
+                'headers' => $this->getRequestHeaders($token)
+            ]);
+            $this->setPaymentTable($response);
+        } catch (GuzzleException $e) {
+            app('apylogger')->error('paymentsRefresh', ['Erro ao obter refresh de pagamentos ']);
+        }
+    }
+ 
+
+    /**
+     * Cria um novo pagamento
+     * 
+     * @param array $data Dados do pagamento (deve conter 'amount', 'description', 'reference') // caso reference for null sera criado
+     * @return array Dados do pagamento criado
+     * @throws PaymentCreationException|MerchantIdGenerationException
+     */
+    public function creates(array $data)
+    {
+        try {
+            // 1. Autenticação
+            $token = $this->getAccessToken();
+            if (!$token) {
+                throw new \RuntimeException('Falha ao obter token de acesso');
+            }
+
+            // . Geração do Merchant ID
+            $merchantId = $this->generateMerchantId();
+            if (!$merchantId) {
+                throw new MerchantIdGenerationException(100);
+            }
+
+            $this->disableHttpErrors();
+
+            // . Configuração dos dados básicos
+            $payload = array_merge($data, [
+                'merchantTransactionId' => $merchantId,
+                // 'currency' => config('apypayment.default_currency', 'AOA'),
+                'paymentMethod' => $this->getMethods(config('apypayment.default_payment_method'))
+            ]);
+            
+            // . Requisição à API
+            $response = $this->client->post($this->apiUrl . '/charges', [
+                'headers' => $this->getRequestHeaders($token),
+                'json' => $payload,
+            ]);
+            
+            // 5. Processamento da resposta
+            $payment = json_decode($response->getBody(), true);
+            return response()->json($payment);
+            
+            // . Log e retorno
+            $this->logger->paymentSuccess($payment);
+            return $payment;
+
+        } catch (\Throwable $e) {
+            return  [$e->getLine(), $e->getFile(), $e->getMessage()];
+        }
+    }
+    
+
+    public function create(array $data) : array
+    {
+        $maxAttempts = 50;
+        $attempt = 1;
+        $lastError = null;
+        
+        // return app('ApyBase')->generateMerchantIdOld();
+        
+        // 1. Autenticação
+            $token = $this->getAccessToken();
+            if (!$token) {
+                $this->logger->error('Falha ao obter token de acesso');
+                return null;
+            }
+            
+            do {
+                try {
+                // 2. Geração do Merchant ID (com regeneração em caso de duplicado)
+                $merchantId = $this->generateMerchantId();
+                if (!$merchantId) {
+                    throw new MerchantIdGenerationException($attempt);
+                }
+                // 3. Preparar payload
+                $payload = array_merge($data, [
+                    'merchantTransactionId' => $merchantId,
+                    'paymentMethod' => $this->getMethods(config('apypayment.default_payment_method'))
+                ]);
+                
+                // return [$merchantId];
+
+                // 4. Fazer requisição
+                $response = $this->client->post($this->apiUrl . '/charges', [
+                    'headers' => $this->getRequestHeaders($token),
+                    'json' => $payload,
+                    'http_errors' => false
+                ]);
+
+                // 5. Processar resposta
+                $responseData = json_decode($response->getBody(), true);
+                $responseData['status'] = $response->getStatusCode();
+
+                // 6. Analisar resposta
+                $result = $this->handlePaymentResponse($payload, $responseData, $attempt);
+                
+                switch ($result['status']) {
+                    case 'success':
+                        $this->logger->paymentSuccess($responseData);
+                        $this->defaultPaymentTable(array_merge(
+                            $this->formatSuccessResponse($responseData),
+                            ['merchantTransactionId'=>$payload['merchantTransactionId'], 'amount'=>$payload['amount'],  'description'=>$payload['description']]
+                        ));
+                        $this->paymentsRefresh();
+                        return $this->formatSuccessResponse($responseData);
+                        
+                    case 'retry':
+                        $this->logger->warning('Tentando novamente', [
+                            'attempt' => $attempt,
+                            'reason' => $result['reason']
+                        ]);
+                        $data = $this->prepareRetryData($data, $result);
+                        break;
+                        
+                    case 'error':
+                        $this->logger->error('Falha no pagamento', $responseData);
+                        return $this->formatErrorResponse($responseData);
+                }
+
+            } catch (MerchantIdGenerationException $e) {
+                $this->logger->error('Falha ao gerar Merchant ID', [
+                    'attempt' => $attempt,
+                    'error' => $e->getMessage()
+                ]);
+                return null;
+            } catch (\Exception $e) {
+                $lastError = [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'message' => $e->getMessage()
+                ];
+                $this->logger->error('Erro na requisição', $lastError);
+            }
+
+            $attempt++;
+            if ($attempt <= $maxAttempts) {
+                sleep(1); // Pausa entre tentativas
+            }
+
+        } while ($attempt <= $maxAttempts);
+
+        $this->logger->error('Número máximo de tentativas atingido', [
+            'last_error' => $lastError
+        ]);
+        return [];
+    }
+
+  
+
+
+
+   
 }

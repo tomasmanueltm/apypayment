@@ -4,9 +4,9 @@ namespace TomasManuelTM\ApyPayment\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use TomasManuelTM\ApyPayment\Logs\ApyLogger;
+use TomasManuelTM\ApyPayment\Services\ApyBase;
 use TomasManuelTM\ApyPayment\Services\ApyAuth;
 use TomasManuelTM\ApyPayment\Services\ApyService;
-use TomasManuelTM\ApyPayment\Services\ApyPaymentService;
 use TomasManuelTM\ApyPayment\Console\Commands\CheckTokenExpiration;
 use TomasManuelTM\ApyPayment\Console\Commands\PublishApyPayment;
 use TomasManuelTM\ApyPayment\Facades\ApyPaymentFacade;
@@ -22,6 +22,7 @@ class ApyPaymentServiceProvider extends ServiceProvider
         $this->registerConfiguration();
         $this->registerMainService();
         $this->registerSharedServices();
+        
     }
 
     /**
