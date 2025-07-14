@@ -288,4 +288,25 @@ abstract class ApyRepository
             app('apylogger')->error('setMethods', [$th->getMessage()]);        
         }
     }
+
+
+    /**
+ * Transforma os dados de pagamento no formato esperado pela API
+ * 
+ * @param array $input Dados no formato simples [amount, currency, reference, description]
+ * @return array Dados no formato estruturado para a API
+ */
+    protected function transformJson(array $input): array
+    {
+        $isdays = isset($input['expiration']) ? Carbon::parse($input['expiration'])->format('Y-m-d') : Carbon::now()->addDays(30)->format('Y-m-d');
+        return [
+            'amount' => $input['amount'],
+            'currency' => config('apypayment.default_currency', 'AOA'),
+            'description' => $input['description'] ?? 'Pagamento sem descrição',
+            'referenceNumber' => [
+                'referenceNumber' => $input['reference'] ?? $this->generateReference(),
+                'dueDate' => $isdays,
+            ],
+        ];
+    }
 }

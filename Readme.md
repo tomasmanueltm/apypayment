@@ -43,7 +43,7 @@ php artisan apypayment:publish
 Adicione ao seu arquivo `.env`:
 
 ```ini
-APY_API_TYPE=Local // Prodution 
+APY_API_TYPE=Local ou Prodution 
 APY_CLIENT_ID=seu_client_id
 APY_CLIENT_SECRET=seu_client_secret
 ```
@@ -52,31 +52,48 @@ APY_CLIENT_SECRET=seu_client_secret
 
 ### Criar um pagamento:
 
-```php
-use TomasManuelTM\ApyPayment\Facades\ApyPayment;
+Esta biblioteca permite criar pagamentos com o mínimo de parâmetros obrigatórios, tornando o uso mais simples e limpo.
 
-$payment = ApyPayment::createPayment([
+```php
+$payment = $service->createPayment([
     'amount' => 100.00,
-    'currency' => 'AOA',
-    'reference' => '123450000',
     'description' => 'Pagamento -12345',
 ]);
+
+
 ```
+
+### Listar pagamentos:
+
+```php
+$service = app('ApyService');
+$payments = $service->getPayments();
+```
+
+
+### lista metodos de pagamentos:
+
+```php
+$service = app('ApyService');
+$payments = $service->getPaymentMethods();
+```
+
 
 ### Buscar pagamentos:
 
 ```php
-$payments = ApyPayment::searchPayments([
-    ['value' => 'REF123', 'type' => 'reference'],
-    ['value' => 'PS00001', 'type' => 'merchant']
-]);
+$service = app('ApyService');
+$payments = $service->capturePayment(PT000000001);
 ```
+
+
+
+
 
 ## 🔧 Métodos Principais
 
 | Método                                                               | Parâmetros                         | Retorno  | Descrição                      |                         |
 | -------------------------------------------------------------------- | ---------------------------------- | -------- | ------------------------------ | ----------------------- |
-| `getAccessToken()`                                                   | –                                  | \`string | null\`                         | Obtém o token de acesso |
 | `createPayment(array $data)`                                         | Dados do pagamento                 | `array`  | Cria uma nova transação        |                         |
 | `capturePayment(string $merchantTransactionId)`                      | ID da transação do comerciante     | `array`  | Captura o pagamento autorizado |                         |
 | `refundPayment(string $merchantTransactionId, float $amount = null)` | ID da transação e valor (opcional) | `array`  | Estorna uma transação          |                         |
@@ -152,4 +169,4 @@ Tomas Manuel — [GitHub](https://github.com/tomasmanueltm) — **[antoniomanuel
 ---
 
 Documentação atualizada em: **12/07/2025**
-Versão do pacote: **1.0.0**
+Versão do pacote: **1.0.3**

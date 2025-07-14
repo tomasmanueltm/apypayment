@@ -401,19 +401,22 @@ class ApyAuth extends ApyRepository
                 return null;
             }
             
-            do {
-                try {
-                // 2. Geração do Merchant ID (com regeneração em caso de duplicado)
+           $data = $this->transformJson($data);
+           do {
+               try {
+                   // 2. Geração do Merchant ID (com regeneração em caso de duplicado)
                 $merchantId = $this->generateMerchantId();
                 if (!$merchantId) {
                     throw new MerchantIdGenerationException($attempt);
                 }
+                
                 // 3. Preparar payload
                 $payload = array_merge($data, [
                     'merchantTransactionId' => $merchantId,
                     'paymentMethod' => $this->getMethods(config('apypayment.default_payment_method'))
                 ]);
                 
+                    // return $payload;
                 // return [$merchantId];
 
                 // 4. Fazer requisição
