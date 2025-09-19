@@ -484,9 +484,88 @@ class ApyAuth extends ApyRepository
         return [];
     }
 
-  
+    /**
+     * Capturar um pagamento
+     * @param string $merchantTransactionId ID da transação
+     * @return array Resultado da captura
+     */
+    public function capture(string $merchantTransactionId): array
+    {
+        try {
+            $token = $this->getAccessToken();
+            if (!$token) {
+                return ['success' => false, 'error' => 'Token não disponível'];
+            }
 
+            $response = $this->client->post($this->apiUrl . "/charges/{$merchantTransactionId}/capture", [
+                'headers' => $this->getRequestHeaders($token)
+            ]);
 
+            $data = json_decode($response->getBody(), true);
+            return ['success' => $response->getStatusCode() === 200, 'data' => $data];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao capturar pagamento', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
 
-   
+    /**
+     * Reembolsar um pagamento
+     * @param string $merchantTransactionId ID da transação
+     * @param float|null $amount Valor do reembolso
+     * @return array Resultado do reembolso
+     */
+    public function refund(string $merchantTransactionId, ?float $amount = null): array
+    {
+        try {
+            $token = $this->getAccessToken();
+            if (!$token) {
+                return ['success' => false, 'error' => 'Token não disponível'];
+            }
+
+            $payload = [];
+            if ($amount !== null) {
+                $payload['amount'] = $amount;
+            }
+
+            $response = $this->client->post($this->apiUrl . "/charges/{$merchantTransactionId}/refund", [
+                'headers' => $this->getRequestHeaders($token),
+                'json' => $payload
+            ]);
+
+            $data = json_decode($response->getBody(), true);
+            return ['success' => $response->getStatusCode() === 200, 'data' => $data];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao reembolsar pagamento', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Consultar status de um pagamento
+     * @param string $merchantTransactionId ID da transação
+     * @return array Status do pagamento
+     */
+    public function getStatus(string $merchantTransactionId): array
+    {
+        try {
+            $token = $this->getAccessToken();
+            if (!$token) {
+                return ['success' => false, 'error' => 'Token não disponível'];
+            }
+
+            $response = $this->client->get($this->apiUrl . "/charges/{$merchantTransactionId}", [
+                'headers' => $this->getRequestHeaders($token)
+            ]);
+
+            $data = json_decode($response->getBody(), true);
+            return ['success' => $response->getStatusCode() === 200, 'data' => $data];
+            
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao consultar status', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
 }

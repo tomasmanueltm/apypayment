@@ -43,47 +43,86 @@ php artisan apypayment:publish
 Adicione ao seu arquivo `.env`:
 
 ```ini
-APY_API_TYPE=Local ou Prodution 
 APY_CLIENT_ID=seu_client_id
 APY_CLIENT_SECRET=seu_client_secret
+APY_RESOURCE=2aed7612-de64-46b5-9e59-1f48f8902d14
+APY_GRANT_TYPE=client_credentials
+```
+
+### Configurações Opcionais:
+
+```ini
+# URLs da API (padrão: ambiente de teste)
+APY_API_URL=https://gwy-api-tst.appypay.co.ao/v2.0
+APY_AUTH_URL=https://login.microsoftonline.com/appypaydev.onmicrosoft.com/oauth2/token
+
+# Configurações HTTP
+APY_HTTP_TIMEOUT=30
+APY_HTTP_VERIFY_SSL=false
 ```
 
 ## 🚀 Uso Básico
 
-### Criar um pagamento:
-
-Esta biblioteca permite criar pagamentos com o mínimo de parâmetros obrigatórios, tornando o uso mais simples e limpo.
+### Inicializar o serviço:
 
 ```php
-$payment = $service->createPayment([
-    'amount' => 100.00,
-    'description' => 'Pagamento -12345',
-]);
+use TomasManuelTM\ApyPayment\Services\ApyService;
 
+$service = app('ApyService');
+// ou
+$service = app(ApyService::class);
+```
 
+### Criar um pagamento:
+
+**Parâmetros obrigatórios:** `amount`, `description`
+
+```php
+try {
+    $payment = $service->createPayment([
+        'amount' => 100.00,
+        'description' => 'Pagamento do pedido #12345',
+        'reference' => 'REF-001' // opcional, será gerado automaticamente
+    ]);
+    
+    if ($payment['success']) {
+        echo "Pagamento criado: {$payment['merchantTransactionId']}";
+        echo "Referência: {$payment['reference']}";
+    }
+} catch (\Exception $e) {
+    echo "Erro: {$e->getMessage()}";
+}
 ```
 
 ### Listar pagamentos:
 
 ```php
-$service = app('ApyService');
 $payments = $service->getPayments();
+
+foreach ($payments['data'] ?? [] as $payment) {
+    echo "ID: {$payment['merchantTransactionId']} - Status: {$payment['status']}";
+}
 ```
 
-
-### lista metodos de pagamentos:
+### Obter métodos de pagamento:
 
 ```php
-$service = app('ApyService');
-$payments = $service->getPaymentMethods();
+$methods = $service->getApplications();
+
+foreach ($methods['data'] ?? [] as $method) {
+    echo "Método: {$method['name']} - Tipo: {$method['type']}";
+}
 ```
 
-
-### Buscar pagamentos:
+### Consultar status de pagamento:
 
 ```php
-$service = app('ApyService');
-$payments = $service->capturePayment(PT000000001);
+$status = $service->getPaymentStatus('PT000000001');
+
+if ($status['success']) {
+    echo "Status: {$status['status']}";
+    echo "Valor: {$status['amount']}";
+}
 ```
 
 
@@ -92,12 +131,74 @@ $payments = $service->capturePayment(PT000000001);
 
 ## 🔧 Métodos Principais
 
-| Método                                                               | Parâmetros                         | Retorno  | Descrição                      |                         |
-| -------------------------------------------------------------------- | ---------------------------------- | -------- | ------------------------------ | ----------------------- |
-| `createPayment(array $data)`                                         | Dados do pagamento                 | `array`  | Cria uma nova transação        |                         |
-| `capturePayment(string $merchantTransactionId)`                      | ID da transação do comerciante     | `array`  | Captura o pagamento autorizado |                         |
-| `refundPayment(string $merchantTransactionId, float $amount = null)` | ID da transação e valor (opcional) | `array`  | Estorna uma transação          |                         |
-| `getPaymentStatus(string $merchantTransactionId)`                    | ID da transação do comerciante     | `array`  | Consulta o status do pagamento |                         |
+### createPayment(array $data)
+
+**Parâmetros obrigatórios:**
+- `amount` (float): Valor do pagamento
+- `description` (string): Descrição do pagamento
+
+**Parâmetros opcionais:**
+- `reference` (string): Referência personalizada
+- `paymentMethod` (string): Método de pagamento específico
+
+**Retorno:**
+```php
+[
+    'success' => true,
+    'merchantTransactionId' => 'PT000000001',
+    'reference' => 'REF-12345',
+    'amount' => 100.00,
+    'status' => 'pending',
+    'expiration' => '2025-01-15T10:30:00Z'
+]
+```
+
+### getPayments()
+
+**Retorno:** Lista todos os pagamentos
+```php
+[
+    'success' => true,
+    'data' => [
+        [
+            'merchantTransactionId' => 'PT000000001',
+            'status' => 'completed',
+            'amount' => 100.00
+        ]
+    ]
+]
+```
+
+### getApplications()
+
+**Retorno:** Lista métodos de pagamento disponíveis
+```php
+[
+    'success' => true,
+    'data' => [
+        [
+            'name' => 'Referência Bancária',
+            'type' => 'REF',
+            'isDefault' => true
+        ]
+    ]
+]
+```
+
+### getPaymentStatus(string $merchantTransactionId)
+
+**Parâmetros:**
+- `merchantTransactionId` (string): ID da transação
+
+**Retorno:**
+```php
+[
+    'success' => true,
+    'status' => 'completed|pending|failed',
+    'amount' => 100.00,
+    'reference' => 'REF-12345'
+]
+```
 
 ## 🌐 Webhooks
 
@@ -144,7 +245,51 @@ composer test-coverage
 
 ## ❓ FAQ
 
-> ⚠️ **A seção de tratamento de erros será expandida em uma próxima versão.**
+### Tratamento de Erros
+
+**Códigos de Status HTTP:**
+- `200`: Sucesso
+- `400`: Dados inválidos
+- `401`: Token inválido/expirado
+- `404`: Pagamento não encontrado
+- `500`: Erro interno do servidor
+
+**Exemplo de tratamento:**
+```php
+try {
+    $payment = $service->createPayment($data);
+    
+    if (!$payment['success']) {
+        throw new Exception($payment['error']);
+    }
+    
+} catch (\TomasManuelTM\ApyPayment\Exceptions\PaymentCreationException $e) {
+    // Erro específico de criação de pagamento
+    Log::error('Falha ao criar pagamento', ['error' => $e->getMessage()]);
+    
+} catch (\TomasManuelTM\ApyPayment\Exceptions\InvalidRequestException $e) {
+    // Dados de entrada inválidos
+    return response()->json(['error' => 'Dados inválidos'], 400);
+    
+} catch (\Exception $e) {
+    // Erro genérico
+    Log::error('Erro inesperado', ['error' => $e->getMessage()]);
+}
+```
+
+### Problemas Comuns
+
+**Q: Token expirado constantemente?**
+A: O sistema gerencia tokens automaticamente. Verifique suas credenciais no `.env`
+
+**Q: Pagamento não encontrado?**
+A: Verifique se o `merchantTransactionId` está correto e se o pagamento existe
+
+**Q: Erro de SSL?**
+A: Por padrão, a verificação SSL está desabilitada para desenvolvimento. Configure `APY_HTTP_VERIFY_SSL=true` em produção
+
+**Q: Como debugar requisições?**
+A: Ative os logs no Laravel e verifique o arquivo de log para detalhes das requisições
 
 ## 🤝 Contribuição
 
