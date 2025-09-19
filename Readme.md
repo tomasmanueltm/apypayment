@@ -313,5 +313,5 @@ Tomas Manuel — [GitHub](https://github.com/tomasmanueltm) — **[antoniomanuel
 
 ---
 
-Documentação atualizada em: **12/07/2025**
+Documentação atualizada em: **19/09/2025**
 Versão do pacote: **1.0.3**
