@@ -398,7 +398,7 @@ class ApyAuth extends ApyRepository
             $token = $this->getAccessToken();
             if (!$token) {
                 $this->logger->error('Falha ao obter token de acesso');
-                return null;
+                return ['success' => false, 'error' => 'Token não disponível'];
             }
             
            $data = $this->transformJson($data);
@@ -461,7 +461,7 @@ class ApyAuth extends ApyRepository
                     'attempt' => $attempt,
                     'error' => $e->getMessage()
                 ]);
-                return null;
+                return ['success' => false, 'error' => 'Falha ao gerar ID'];
             } catch (\Exception $e) {
                 $lastError = [
                     'file' => $e->getFile(),
@@ -481,7 +481,7 @@ class ApyAuth extends ApyRepository
         $this->logger->error('Número máximo de tentativas atingido', [
             'last_error' => $lastError
         ]);
-        return [];
+        return ['success' => false, 'error' => 'Máximo de tentativas atingido'];
     }
 
     /**

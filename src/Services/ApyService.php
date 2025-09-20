@@ -11,15 +11,17 @@ use TomasManuelTM\ApyPayment\Services\ApyAuth;
 use TomasManuelTM\ApyPayment\Models\ApyMethod;
 use TomasManuelTM\ApyPayment\Models\ApyPayment;
 use TomasManuelTM\ApyPayment\Exceptions\InvalidRequestException;
+use TomasManuelTM\ApyPayment\Application\Services\PaymentService;
 
 
 class ApyService extends ApyBase
 {
     private ApyAuth $auth;
+    private PaymentService $paymentService;
 
-    public function __construct(ApyAuth $auth) {
+    public function __construct(ApyAuth $auth, PaymentService $paymentService) {
         $this->auth = $auth;
-
+        $this->paymentService = $paymentService;
     }
     
     /**
@@ -44,14 +46,26 @@ class ApyService extends ApyBase
 
 
     /**
-     * Criar um novo pagamento
+     * Criar um novo pagamento usando DDD
      * @param array $data Dados do pagamento (amount, description obrigatórios)
      * @return array Resposta da criação do pagamento
      */
     public function createPayment(array $data): array
     {
         $this->validatePaymentData($data);
-        return $this->auth->create($data);
+        
+        // Usar DDD para criar pagamento
+        $payment = $this->paymentService->createPayment($data);
+        
+        // Integrar com API externa
+        $apiResponse = $this->auth->create([
+            'merchantTransactionId' => $payment->getId()->getValue(),
+            'amount' => $payment->getAmount()->getValue(),
+            'description' => $payment->getDescription(),
+            'reference' => $payment->getReference()
+        ]);
+        
+        return $apiResponse;
     }
 
     /**
