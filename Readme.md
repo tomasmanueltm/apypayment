@@ -545,6 +545,6 @@ Tomas Manuel — [GitHub](https://github.com/tomasmanueltm) — **[antoniomanuel
 
 ---
 
-**Documentação atualizada em: 15/01/2025**  
+**Documentação atualizada em: 15/09/2025**  
 **Versão do pacote: 1.0.3**  
 **Compatibilidade: Laravel 9.0+ | PHP 8.0+**
