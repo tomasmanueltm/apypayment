@@ -513,23 +513,23 @@ Tomas Manuel — [GitHub](https://github.com/tomasmanueltm) — **[antoniomanuel
 
 ## 📈 Changelog
 
-### v1.0.3 (2025-01-15)
+### v1.0.3 (19-09-2025)
 - ✅ Implementação completa de DDD
 - ✅ Métodos de captura e reembolso
 - ✅ Melhorias na documentação
 - ✅ Testes unitários completos
 - 🐛 Correções de bugs menores
 
-### v1.0.2 (2025-01-10)
+### v1.0.2 (17-07-2025)
 - ✅ Sistema de logs aprimorado
 - ✅ Gestão automática de tokens
 - ✅ Validações de entrada
 
-### v1.0.1 (2025-01-05)
+### v1.0.1 (15-07-2025)
 - ✅ Correções de compatibilidade
 - ✅ Melhorias de performance
 
-### v1.0.0 (2025-01-01)
+### v1.0.0 (13-07-2025)
 - 🎉 Lançamento inicial
 - ✅ Integração básica com AppyPay
 - ✅ CRUD de pagamentos
