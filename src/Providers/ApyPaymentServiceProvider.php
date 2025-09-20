@@ -114,6 +114,15 @@ class ApyPaymentServiceProvider extends ServiceProvider
         
         // Registro do Base com alias para facilitar acesso
         $this->app->alias(ApyBase::class, 'apybase');
+        
+        // DDD - Repository
+        $this->app->bind(
+            \TomasManuelTM\ApyPayment\Domain\Payment\Repositories\PaymentRepositoryInterface::class,
+            \TomasManuelTM\ApyPayment\Infrastructure\Repositories\EloquentPaymentRepository::class
+        );
+        
+        // DDD - Application Service
+        $this->app->singleton(\TomasManuelTM\ApyPayment\Application\Services\PaymentService::class);
     }
 
 
