@@ -75,6 +75,14 @@ class ApyAuth extends ApyRepository
     }
 
     /**
+     * Configura ResponseJson
+     * @return array || null
+     */
+    private function isSucess($response){
+        return ($response) ? (json_decode($response->getBody(), true)) : [];
+    }
+
+    /**
      * Configura o cliente HTTP para não lançar exceções automaticamente
      */
     private function disableHttpErrors(): void
@@ -166,6 +174,9 @@ class ApyAuth extends ApyRepository
         $defaultMethod = ApyMethod::where('isDefault', true)->first();
         
         if (!$defaultMethod) {
+           $method_payment =  $this->applications();
+           $this->setMethods($method_payment);
+           
             $this->logger->error('getMethods', ['Nenhum método de pagamento padrão configurado']);
         }
         
@@ -248,6 +259,29 @@ class ApyAuth extends ApyRepository
         // DB::table($this->getDefaultStorageTable())->create($data);
     }
 
+
+    /*
+    *  Registrar metodos de pagamento 
+    */
+    public function setMethods(IJson $array): void
+    {
+        $payments =  $this->isSucess($array) ? ($this->isSucess($array)) : [];
+ 
+        try {
+            foreach ($payments['applications'] as $data) {
+                ApyMethod::updateOrCreate(['hash' => $data['id']], [
+                    'hash' => $data['id'],
+                    'name' => $data['name'],
+                    'method'=> $data['paymentMethod'],
+                    'isActive'=> $data['isActive'],
+                    'isDefault'=> $data['isDefault'],
+                    'type'=> $data['paymentMethod'].'_'.$data['applicationKyes'][0]['apiKey'],
+                ]);
+            }
+        } catch (\Exception $e) {
+            app('apylogger')->error('generateToken', ['Falha ao armazenar metodos de pagamentos '=> $e->getMessage()]);
+        }
+    }
 
 
     /*
@@ -398,7 +432,7 @@ class ApyAuth extends ApyRepository
             $token = $this->getAccessToken();
             if (!$token) {
                 $this->logger->error('Falha ao obter token de acesso');
-                return ['success' => false, 'error' => 'Token não disponível'];
+                return null;
             }
             
            $data = $this->transformJson($data);
@@ -461,7 +495,7 @@ class ApyAuth extends ApyRepository
                     'attempt' => $attempt,
                     'error' => $e->getMessage()
                 ]);
-                return ['success' => false, 'error' => 'Falha ao gerar ID'];
+                return null;
             } catch (\Exception $e) {
                 $lastError = [
                     'file' => $e->getFile(),
@@ -481,91 +515,12 @@ class ApyAuth extends ApyRepository
         $this->logger->error('Número máximo de tentativas atingido', [
             'last_error' => $lastError
         ]);
-        return ['success' => false, 'error' => 'Máximo de tentativas atingido'];
+        return [];
     }
 
-    /**
-     * Capturar um pagamento
-     * @param string $merchantTransactionId ID da transação
-     * @return array Resultado da captura
-     */
-    public function capture(string $merchantTransactionId): array
-    {
-        try {
-            $token = $this->getAccessToken();
-            if (!$token) {
-                return ['success' => false, 'error' => 'Token não disponível'];
-            }
+  
 
-            $response = $this->client->post($this->apiUrl . "/charges/{$merchantTransactionId}/capture", [
-                'headers' => $this->getRequestHeaders($token)
-            ]);
 
-            $data = json_decode($response->getBody(), true);
-            return ['success' => $response->getStatusCode() === 200, 'data' => $data];
-            
-        } catch (\Exception $e) {
-            $this->logger->error('Erro ao capturar pagamento', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }
 
-    /**
-     * Reembolsar um pagamento
-     * @param string $merchantTransactionId ID da transação
-     * @param float|null $amount Valor do reembolso
-     * @return array Resultado do reembolso
-     */
-    public function refund(string $merchantTransactionId, ?float $amount = null): array
-    {
-        try {
-            $token = $this->getAccessToken();
-            if (!$token) {
-                return ['success' => false, 'error' => 'Token não disponível'];
-            }
-
-            $payload = [];
-            if ($amount !== null) {
-                $payload['amount'] = $amount;
-            }
-
-            $response = $this->client->post($this->apiUrl . "/charges/{$merchantTransactionId}/refund", [
-                'headers' => $this->getRequestHeaders($token),
-                'json' => $payload
-            ]);
-
-            $data = json_decode($response->getBody(), true);
-            return ['success' => $response->getStatusCode() === 200, 'data' => $data];
-            
-        } catch (\Exception $e) {
-            $this->logger->error('Erro ao reembolsar pagamento', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Consultar status de um pagamento
-     * @param string $merchantTransactionId ID da transação
-     * @return array Status do pagamento
-     */
-    public function getStatus(string $merchantTransactionId): array
-    {
-        try {
-            $token = $this->getAccessToken();
-            if (!$token) {
-                return ['success' => false, 'error' => 'Token não disponível'];
-            }
-
-            $response = $this->client->get($this->apiUrl . "/charges/{$merchantTransactionId}", [
-                'headers' => $this->getRequestHeaders($token)
-            ]);
-
-            $data = json_decode($response->getBody(), true);
-            return ['success' => $response->getStatusCode() === 200, 'data' => $data];
-            
-        } catch (\Exception $e) {
-            $this->logger->error('Erro ao consultar status', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }
+   
 }

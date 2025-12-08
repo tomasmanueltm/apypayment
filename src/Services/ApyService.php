@@ -10,18 +10,16 @@ use TomasManuelTM\ApyPayment\Services\ApyBase;
 use TomasManuelTM\ApyPayment\Services\ApyAuth;
 use TomasManuelTM\ApyPayment\Models\ApyMethod;
 use TomasManuelTM\ApyPayment\Models\ApyPayment;
-use TomasManuelTM\ApyPayment\Exceptions\InvalidRequestException;
-use TomasManuelTM\ApyPayment\Application\Services\PaymentService;
+use TomasManuelTM\ApyPayment\Events\PaymentProcessEvent;
 
 
 class ApyService extends ApyBase
 {
     private ApyAuth $auth;
-    private PaymentService $paymentService;
 
-    public function __construct(ApyAuth $auth, PaymentService $paymentService) {
+    public function __construct(ApyAuth $auth) {
         $this->auth = $auth;
-        $this->paymentService = $paymentService;
+
     }
     
     /**
@@ -41,81 +39,86 @@ class ApyService extends ApyBase
     {
         $response = $this->auth->payments();
         $this->setPayments($response);
-        return ($response) ? json_decode($response->getBody(), true) :  [];
+        //app('apylogger')->sucesso('getPayments', $response);
+     //   \Illuminate\Support\Facades\Log::info([$response]);
+     return ($response) ? json_decode($response->getBody(), true) :  [];
     }
 
-
-    /**
-     * Criar um novo pagamento usando DDD
-     * @param array $data Dados do pagamento (amount, description obrigatórios)
-     * @return array Resposta da criação do pagamento
-     */
-    public function createPayment(array $data): array
+    public function getPaymentAsyncFix(): Array
     {
-        $this->validatePaymentData($data);
+
+        $response = $this->auth->payments();
+        $result = ($response) ? json_decode($response->getBody(), true) :  [];
         
-        // Usar DDD para criar pagamento
-        $payment = $this->paymentService->createPayment($data);
+        register_shutdown_function(function() use ($result) {
+            $this->setPayment($result);
+        });
         
-        // Integrar com API externa
-        $apiResponse = $this->auth->create([
-            'merchantTransactionId' => $payment->getId()->getValue(),
-            'amount' => $payment->getAmount()->getValue(),
-            'description' => $payment->getDescription(),
-            'reference' => $payment->getReference()
-        ]);
+        return $result;
+    }
+    
+    
+    public function getPaymentAsync(): Array
+    {
+        $response = $this->auth->payments();
+        $result = ($response) ? json_decode($response->getBody(), true) :  [];
         
-        return $apiResponse;
-    }
-
-    /**
-     * Capturar um pagamento autorizado
-     * @param string $merchantTransactionId ID da transação
-     * @return array Status do pagamento
-     */
-    public function capturePayment(string $merchantTransactionId): array
-    {
-        return $this->auth->capture($merchantTransactionId);
-    }
-
-    /**
-     * Reembolsar um pagamento
-     * @param string $merchantTransactionId ID da transação
-     * @param float|null $amount Valor do reembolso (null = total)
-     * @return array Resultado do reembolso
-     */
-    public function refundPayment(string $merchantTransactionId, ?float $amount = null): array
-    {
-        return $this->auth->refund($merchantTransactionId, $amount);
-    }
-
-    /**
-     * Consultar status de um pagamento
-     * @param string $merchantTransactionId ID da transação
-     * @return array Status atual do pagamento
-     */
-    public function getPaymentStatus(string $merchantTransactionId): array
-    {
-        return $this->auth->getStatus($merchantTransactionId);
-    }
-
-    /**
-     * Validar dados de entrada para pagamento
-     * @param array $data Dados a serem validados
-     * @throws \InvalidArgumentException
-     */
-    private function validatePaymentData(array $data): void
-    {
-        $required = ['amount', 'description'];
+        $filePath = storage_path('app/payment.json');
+        file_put_contents($filePath, json_encode($result));
         
-        foreach ($required as $field) {
-            if (!isset($data[$field]) || empty($data[$field])) {
-                throw new \InvalidArgumentException("Campo '{$field}' é obrigatório");
-            }
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
         }
+        
+        ignore_user_abort(true);
+        set_time_limit(0);
+        
+         $this->setPayment($filePath);
+        
+        return $result;
+    }
 
-        if (!is_numeric($data['amount']) || $data['amount'] <= 0) {
-            throw new \InvalidArgumentException('Valor deve ser um número positivo');
+    public function setPayment($filePath) {
+        if (!file_exists($filePath)) {
+            return;
         }
+        
+        $res = json_decode(file_get_contents($filePath), true);
+        $allData = [];
+        
+        foreach ($res['payments'] as $payment) {
+            $allData[] = [
+                'id' => $payment['id'],
+                'merchantTransactionId' => $payment['merchantTransactionId'],
+                'type' => $payment['type'],
+                'operation' => $payment['operation'],
+                'amount' => $payment['amount'],
+                'currency' => $payment['currency'],
+                'status' => $payment['status'],
+                'description' => $payment['description'],
+                'paymentMethod' => $payment['paymentMethod'],
+                'disputes' => $payment['disputes'],
+                'applicationFeeAmount' => $payment['applicationFeeAmount'],
+                'options' => json_encode($payment['options']),
+                'createdDate' => Carbon::parse($payment['createdDate']),
+                'updatedDate' => Carbon::parse($payment['updatedDate']),
+                'reference' => json_encode([
+                    'referenceNumber' => $payment['reference']['referenceNumber'] ?? time(),
+                    'dueDate' => Carbon::parse($payment['reference']['dueDate'] ?? date('Y-m-d', strtotime('+2 days'))),
+                    'entity' => $payment['reference']['entity'] ?? '00083',
+                ]),
+            ];
+        }
+        
+        if (!empty($allData)) {
+            ApySys::upsert($allData, ['merchantTransactionId'], ['status', 'updatedDate', 'amount', 'currency', 'description', 'paymentMethod', 'disputes', 'applicationFeeAmount', 'options', 'reference']);
+        }
+        
+        @unlink($filePath);
+    }
+
+
+    public function createPayment(array $json) {
+      return  $this->auth->create($json);
     }
 }
