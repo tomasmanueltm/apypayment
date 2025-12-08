@@ -38,32 +38,9 @@ class ApyService extends ApyBase
     public function getPayments(): Array
     {
         $response = $this->auth->payments();
-        $this->setPayments($response);
-        //app('apylogger')->sucesso('getPayments', $response);
-     //   \Illuminate\Support\Facades\Log::info([$response]);
-     return ($response) ? json_decode($response->getBody(), true) :  [];
-    }
-
-    public function getPaymentAsyncFix(): Array
-    {
-
-        $response = $this->auth->payments();
         $result = ($response) ? json_decode($response->getBody(), true) :  [];
         
-        register_shutdown_function(function() use ($result) {
-            $this->setPayment($result);
-        });
-        
-        return $result;
-    }
-    
-    
-    public function getPaymentAsync(): Array
-    {
-        $response = $this->auth->payments();
-        $result = ($response) ? json_decode($response->getBody(), true) :  [];
-        
-        $filePath = storage_path('app/payment.json');
+        $filePath = storage_path('app/payments.json');
         file_put_contents($filePath, json_encode($result));
         
         if (function_exists('fastcgi_finish_request')) {
@@ -78,7 +55,8 @@ class ApyService extends ApyBase
         return $result;
     }
 
-    public function setPayment($filePath) {
+  
+    private function setPayment($filePath) {
         if (!file_exists($filePath)) {
             return;
         }
