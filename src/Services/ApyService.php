@@ -40,7 +40,14 @@ class ApyService extends ApyBase
     public function getPayments(): Array
     {
         $response = $this->auth->payments();
-        $this->setPayments($response);
+        #$this->setPayments($response);
+        return ($response) ? json_decode($response->getBody(), true) :  [];
+    }
+
+    public function getPayments(): Array
+    {
+        $response = $this->auth->payments();
+        #$this->setPayments($response);
         return ($response) ? json_decode($response->getBody(), true) :  [];
     }
 
