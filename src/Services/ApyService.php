@@ -35,12 +35,13 @@ class ApyService extends ApyBase
     /**
      * Obter todos os pagamentos 
      */
+
     public function getPayments(): Array
     {
         $response = $this->auth->payments();
         $result = ($response) ? json_decode($response->getBody(), true) :  [];
         
-        $filePath = storage_path('app/payments.json');
+        $filePath = storage_path('app/payment.json');
         file_put_contents($filePath, json_encode($result));
         
         if (function_exists('fastcgi_finish_request')) {
@@ -54,6 +55,17 @@ class ApyService extends ApyBase
         
         return $result;
     }
+
+
+    /**
+     * Criar um novo pagamento
+     * @param array $data Dados do pagamento (amount, description obrigatórios)
+     * @return array Resposta da criação do pagamento
+     */
+    public function createPayment(array $json) {
+      return  $this->auth->create($json);
+    }
+    
 
   
     private function setPayment($filePath) {
@@ -93,10 +105,5 @@ class ApyService extends ApyBase
         }
         
         @unlink($filePath);
-    }
-
-
-    public function createPayment(array $json) {
-      return  $this->auth->create($json);
     }
 }
