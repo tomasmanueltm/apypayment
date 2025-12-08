@@ -278,6 +278,10 @@ class ApyAuth extends ApyRepository
                     'type'=> $data['paymentMethod'].'_'.$data['applicationKyes'][0]['apiKey'],
                 ]);
             }
+
+            if($payments['applications'] == []){
+                app('apylogger')->error('setMethods', ['Nenhum método de pagamento configurado']);
+            }
         } catch (\Exception $e) {
             app('apylogger')->error('generateToken', ['Falha ao armazenar metodos de pagamentos '=> $e->getMessage()]);
         }
